@@ -24,6 +24,10 @@ export default class Cache<T> {
     return this.entries[key];
   }
 
+  public getKeys(): string[] {
+    return Object.keys(this.entries);
+  }
+
   public invalidate(key: string | null = null): void {
     if (key === null) {
       this.entries = {};

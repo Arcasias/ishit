@@ -1,12 +1,14 @@
 import { Component, hooks, tags } from "@odoo/owl";
+import { OwlEvent } from "@odoo/owl/dist/types/core/owl_event";
 import { getGoogleImageUrl, log, range } from "../../common/utils";
 import { electronPublicApi } from "../../electron/preload";
 import Cache from "../classes/Cache";
+import Dropdown, { DropdownItem } from "./DropdownComponent";
 import ImageComponent from "./ImageComponent";
 
 declare const electron: typeof electronPublicApi;
 
-type Extension = "all" | "gif" | "png" | "jpg" | "jpeg";
+type Extension = "all" | "gif" | "png";
 
 const { xml: html, css } = tags;
 const { useExternalListener, useRef, useState } = hooks;
@@ -14,7 +16,17 @@ const { useExternalListener, useRef, useState } = hooks;
 const IMAGE_COLS = 5;
 const IMAGE_ROWS = 5;
 const IMAGE_URL_RE = /"https?:\/\/[\w\/\.-]+\.(png|jpg|jpeg|gif)"/g;
+const EXTENSION_RE = /\b(gif|png)\b/g;
 const HIGHTLIGHT_COLOR = "#ff0080";
+
+function cleanQuery(query: string): string {
+  return query
+    .replace(EXTENSION_RE, "")
+    .replace(/['"\<\>]+/g, "") // removes invalid characters
+    .replace(/[\s\n_-]+/g, " ") // unifies white spaces
+    .trim()
+    .toLowerCase();
+}
 
 function getDefaultConfig() {
   return {
@@ -24,25 +36,30 @@ function getDefaultConfig() {
 
 function getDefaultState() {
   return {
-    urls: <string[]>[],
-    query: <string>"",
+    activeSuggestion: <number | null>null,
     ext: <Extension>"all",
-    hoveredImage: <string | null>null,
     focusedImage: <string | null>null,
+    hoveredImage: <string | null>null,
+    imageSizes: <{ [url: string]: number[] | null }>{},
     pageIndex: <number>0,
-    imageInfos: <{ [url: string]: string | null }>{},
+    query: <string>"",
+    searching: <boolean>false,
     settingsOpen: <boolean>false,
+    showSuggestions: <boolean>false,
+    updateId: <number>0,
+    urls: <string[]>[],
   };
 }
 
 export default class App extends Component {
-  static components = { ImageComponent };
+  static components = { ImageComponent, Dropdown };
 
   //---------------------------------------------------------------------------
   // TEMPLATE
   //---------------------------------------------------------------------------
   static template = html`
     <div class="app container-fluid">
+      <t t-set="history" t-value="getHistory()" />
       <t t-if="state.settingsOpen">
         <div class="modal-backdrop show"></div>
         <div class="modal" tabindex="-1" role="dialog">
@@ -110,7 +127,25 @@ export default class App extends Component {
               aria-label="Search"
               t-ref="search-input"
               t-model="state.query"
+              t-on-focus="state.showSuggestions = true"
+              t-on-blur="state.showSuggestions = false"
+              t-on-keydown="onSearchKeydown"
             />
+            <t t-set="suggestions" t-value="getSuggestions()" />
+            <div
+              t-if="state.showSuggestions and suggestions.length"
+              class="dropdown-menu"
+            >
+              <a
+                t-foreach="suggestions"
+                t-as="query"
+                t-key="query_index"
+                t-att-class="{ active: state.activeSuggestion === query_index }"
+                class="dropdown-item"
+                href="#"
+                t-esc="query"
+              ></a>
+            </div>
             <div class="input-group-append">
               <button class="btn btn-primary" type="submit">Search</button>
               <button class="btn text-primary" type="button" t-on-click="reset">
@@ -127,33 +162,46 @@ export default class App extends Component {
           <i class="fas fa-cog"></i>
         </button>
       </nav>
-      <div class="row">
+      <div class="row" t-if="state.urls.length">
         <div class="col">
-          <ul class="pagination">
-            <li class="page-item" t-on-click.prevent="pagePrev()">
-              <button class="page-link" t-att-disabled="state.pageIndex lte 0">
-                Previous
-              </button>
-            </li>
-            <li
-              t-foreach="range(pageCount)"
-              t-as="page"
-              t-key="page"
-              class="page-item"
-              t-att-class="{ active: state.pageIndex === page }"
-              t-on-click.prevent="pageSet(page, null)"
-            >
-              <button class="page-link" t-esc="page + 1"></button>
-            </li>
-            <li class="page-item" t-on-click.prevent="pageNext()">
-              <button
-                class="page-link"
-                t-att-disabled="state.pageIndex gte pageCount - 1"
+          <nav class="nav mb-3">
+            <ul class="pagination m-0 mr-auto">
+              <li class="page-item" t-on-click.prevent="pagePrev()">
+                <button
+                  class="page-link"
+                  t-att-disabled="state.pageIndex lte 0"
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+              </li>
+              <li
+                t-foreach="range(pageCount)"
+                t-as="page"
+                t-key="page"
+                class="page-item"
+                t-att-class="{ active: state.pageIndex === page }"
+                t-on-click.prevent="pageSet(page, null)"
               >
-                Next
-              </button>
-            </li>
-          </ul>
+                <button class="page-link" t-esc="page + 1"></button>
+              </li>
+              <li class="page-item" t-on-click.prevent="pageNext()">
+                <button
+                  class="page-link"
+                  t-att-disabled="state.pageIndex gte pageCount - 1"
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+            <Dropdown
+              t-if="history.length"
+              title="'History'"
+              items="history"
+              t-on-select.stop="applyHistoryValue"
+              t-on-clear.stop="onHistoryClear"
+              t-on-remove.stop="onHistoryRemove"
+            />
+          </nav>
           <div class="response-wrapper">
             <div
               t-foreach="getCurrentPageUrls()"
@@ -165,7 +213,7 @@ export default class App extends Component {
               t-on-mouseenter="setHoveredImage(true)"
               t-on-mouseleave="setHoveredImage(false)"
               t-on-focus="setFocusedImage(true)"
-              t-on-click="copyUrl(url)"
+              t-on-click="copyImage"
               t-on-keydown="onImageKeydown(url_index)"
             >
               <ImageComponent src="url" t-on-load.stop="onImageLoad" />
@@ -175,30 +223,56 @@ export default class App extends Component {
         <div class="col pl-0">
           <div class="preview mr-0" t-if="activeImage">
             <div class="image-wrapper">
-              <ImageComponent src="activeImage" />
+              <ImageComponent src="activeImage" t-ref="preview-image" />
             </div>
-            <nav class="nav">
-              <li class="nav-item">
-                <a
-                  class="nav-link btn-outline-primary"
-                  t-att-href="activeImage"
-                  download="download"
-                >
-                  <i class="fas fa-download"></i>
-                </a>
-              </li>
-              <li class="nav-item">
-                <div
-                  class="nav-link"
-                  t-esc="state.imageInfos[activeImage]"
-                ></div>
-              </li>
-            </nav>
-          </div>
-          <div t-elif="!state.urls.length" class="no-preview text-muted">
-            Search images in the search bar above
+            <div class="image-options input-group">
+              <a
+                class="btn btn-outline-primary mr-2"
+                title="Download"
+                download="download"
+                t-att-href="activeImage"
+                ><i class="fas fa-download"></i
+              ></a>
+              <button
+                class="btn btn-outline-primary mr-2"
+                title="Copy image"
+                t-on-click="copyImage(previewImageRef.el)"
+              >
+                <i class="fas fa-copy"></i>
+              </button>
+              <button
+                class="btn btn-outline-primary mr-2"
+                title="Copy URL"
+                t-on-click="copyUrl(activeImage)"
+              >
+                <i class="fas fa-code"></i>
+              </button>
+              <span
+                class="input-group-text ml-auto"
+                t-esc="getImageSize(activeImage)"
+              ></span>
+            </div>
           </div>
         </div>
+      </div>
+      <div t-elif="state.searching" class="no-urls text-muted">
+        <span class="default-message">Searching ...</span>
+      </div>
+      <div t-else="" class="no-urls text-muted">
+        <nav class="nav">
+          <span class="default-message mr-3"
+            >Search images in the search bar above</span
+          >
+          <Dropdown
+            t-if="history.length"
+            title="'Browse search history'"
+            items="history"
+            large="true"
+            t-on-select.stop="applyHistoryValue"
+            t-on-clear.stop="onHistoryClear"
+            t-on-remove.stop="onHistoryRemove"
+          />
+        </nav>
       </div>
     </div>
   `;
@@ -222,9 +296,20 @@ export default class App extends Component {
       height: 83vh;
     }
 
-    .preview .image-wrapper {
-      max-height: 80vh;
-      overflow-y: auto;
+    .preview {
+      height: 100%;
+      position: relative;
+
+      .image-wrapper {
+        max-height: 82vh;
+        overflow-y: auto;
+      }
+
+      .image-options {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+      }
     }
 
     .image-wrapper {
@@ -248,13 +333,16 @@ export default class App extends Component {
       }
     }
 
-    .no-preview {
+    .no-urls {
       height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
-      font-style: italic;
+
+      .default-message {
+        font-size: 2rem;
+        font-style: italic;
+      }
     }
   `;
 
@@ -270,10 +358,11 @@ export default class App extends Component {
   private toFocus: number | null = null;
   private searchCache = new Cache("urls", (key) => this.fetchUrls(key));
   private searchInputRef = useRef("search-input");
+  private previewImageRef = useRef("preview-image");
 
   private cols: number = IMAGE_COLS;
   private rows: number = IMAGE_ROWS;
-  private exts: Extension[] = ["all", "gif", "png", "jpg", "jpeg"];
+  private exts: Extension[] = ["all", "gif", "png"];
 
   private get activeImage(): string | null {
     return this.state.hoveredImage || this.state.focusedImage;
@@ -325,10 +414,38 @@ export default class App extends Component {
   // PRIVATE
   //---------------------------------------------------------------------------
 
-  private async copyUrl(url: string): Promise<void> {
-    if (url && this.hasClipboardAccess) {
-      await navigator.clipboard.writeText(url);
+  private applyHistoryValue({ detail }: OwlEvent<DropdownItem>): void {
+    this.state.query = detail.value;
+    this.state.ext = detail.badge
+      ? (detail.badge.toLowerCase() as Extension)
+      : "all";
+    this.search();
+  }
+
+  private async copyImage(target: HTMLElement | Event): Promise<void> {
+    const img = this.getImage(target);
+    if (!img || !this.hasClipboardAccess) return;
+    if (!img.complete) {
+      img.addEventListener("load", () => this.copyImage(img), { once: true });
+      return;
     }
+    if (img.src.endsWith("gif")) {
+      return this.copyUrl(img.src);
+    }
+    const canvas = document.createElement("canvas") as HTMLCanvasElement;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext("2d")!.drawImage(img, 0, 0);
+    const blob: Blob = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b!), "image/png")
+    );
+    const data = [new ClipboardItem({ "image/png": blob })];
+    await navigator.clipboard.write(data);
+  }
+
+  private async copyUrl(url: string | null): Promise<void> {
+    if (!url || !this.hasClipboardAccess) return;
+    await navigator.clipboard.writeText(url);
   }
 
   private async fetchUrls(query: string): Promise<string[] | false> {
@@ -377,10 +494,10 @@ export default class App extends Component {
     );
     const target = images[index];
     if (!target) return;
-    this.setFocusedImage(true, { target });
+    this.setFocusedImage(true, target);
     if (this.state.focusedImage) {
       target.focus();
-      this.copyUrl(this.state.focusedImage);
+      this.copyImage(target);
       return;
     } else {
       return;
@@ -391,25 +508,76 @@ export default class App extends Component {
     return this.searchInputRef.el?.focus();
   }
 
+  private forceUpdate(): void {
+    this.state.updateId++;
+  }
+
   private getCurrentPageUrls(): string[] {
     const count = this.rows * this.cols;
     const start = this.state.pageIndex * count;
     return this.state.urls.slice(start, start + count);
   }
 
-  private getImageSrc(target: HTMLDivElement): string | null {
-    let img: HTMLImageElement | null;
-    if (target instanceof HTMLImageElement) {
-      img = target;
-    } else {
-      img = target.querySelector<HTMLImageElement>("img");
+  private getHistory(): DropdownItem[] {
+    return this.getSuggestions(true).map((suggestion) => {
+      let badge: string | null = null;
+      const id = suggestion;
+      const value = suggestion
+        .replace(EXTENSION_RE, (ext: string) => {
+          badge = ext.toUpperCase();
+          return "";
+        })
+        .trim();
+      return { id, value, badge };
+    });
+  }
+
+  private getImage(target: HTMLElement | Event): HTMLImageElement | null {
+    if (target instanceof Event) {
+      target = target.target as HTMLElement;
     }
-    return img && img.src;
+    if (target instanceof HTMLImageElement) {
+      return target;
+    } else {
+      return target.querySelector<HTMLImageElement>("img");
+    }
+  }
+
+  private getImageSize(url: string): string {
+    const size = this.state.imageSizes[url];
+    return size ? `${size[0]}x${size[1]}` : "loading...";
+  }
+
+  private getSuggestions(raw: boolean = false): string[] {
+    const keys = this.searchCache.getKeys();
+    if (raw) return keys;
+    const cleanedQuery = cleanQuery(this.state.query);
+    if (cleanedQuery.length) {
+      return [...new Set(keys.map(cleanQuery).filter(Boolean))].filter(
+        (q) => q !== cleanedQuery && q.startsWith(cleanedQuery)
+      );
+    } else {
+      return [];
+    }
   }
 
   private onDownloadPathChanged(): void {
+    if (this.config.downloadPath) {
+      this.config.downloadPath = this.config.downloadPath.replace(/['"]+/, "");
+    }
     this.updateConfig();
     electron.send("set-download-path", this.config.downloadPath);
+  }
+
+  private onHistoryClear(): void {
+    this.searchCache.invalidate();
+    this.state.query = "";
+    this.forceUpdate();
+  }
+
+  private onHistoryRemove({ detail }: OwlEvent<DropdownItem>): void {
+    this.searchCache.invalidate(detail.id);
+    this.forceUpdate();
   }
 
   private onImageKeydown(index: number, ev: KeyboardEvent): void {
@@ -419,12 +587,12 @@ export default class App extends Component {
       case "ArrowUp": {
         const newIndex = index - this.cols;
         if (newIndex >= 0) this.focusImage(newIndex);
-        break;
+        return;
       }
       case "ArrowDown": {
         const newIndex = index + this.cols;
         if (newIndex < total) this.focusImage(newIndex);
-        break;
+        return;
       }
       case "ArrowRight": {
         const newIndex = index + 1;
@@ -433,7 +601,7 @@ export default class App extends Component {
         } else {
           this.pageNext();
         }
-        break;
+        return;
       }
       case "ArrowLeft": {
         const newIndex = index - 1;
@@ -442,23 +610,61 @@ export default class App extends Component {
         } else {
           this.pagePrev();
         }
-        break;
+        return;
       }
       case "Escape": {
         target.blur();
-        break;
+        return;
+      }
+      case "c": {
+        if (ev.ctrlKey) this.copyImage(target);
+        return;
       }
     }
   }
 
   private onImageLoad(ev: Event): void {
     const img = ev.target as HTMLImageElement;
-    this.state.imageInfos[
-      img.src
-    ] = `Size: ${img.naturalWidth}x${img.naturalHeight}`;
+    this.state.imageSizes[img.src] = [img.naturalWidth, img.naturalHeight];
   }
 
-  private onWindowKeydown({ key, ctrlKey, shiftKey }: KeyboardEvent): void {
+  private onSearchKeydown(ev: KeyboardEvent): void {
+    const { activeSuggestion } = this.state;
+    const isNull = activeSuggestion === null;
+    switch (ev.key) {
+      case "ArrowUp": {
+        ev.preventDefault();
+        if (!isNull && activeSuggestion! > 0) {
+          this.state.activeSuggestion!--;
+        } else {
+          this.state.activeSuggestion = this.getSuggestions().length - 1;
+        }
+        return;
+      }
+      case "ArrowDown": {
+        ev.preventDefault();
+        const suggestions = this.getSuggestions();
+        if (!isNull && activeSuggestion! < suggestions.length - 1) {
+          this.state.activeSuggestion!++;
+        } else {
+          this.state.activeSuggestion = 0;
+        }
+        return;
+      }
+      case "Enter": {
+        if (isNull) return;
+        const suggestion = this.getSuggestions()[activeSuggestion!];
+        if (suggestion) this.state.query = suggestion;
+        return;
+      }
+      case "Escape": {
+        this.state.query = "";
+        return;
+      }
+    }
+  }
+
+  private onWindowKeydown({ key, ctrlKey }: KeyboardEvent): void {
     switch (key) {
       case "F12": {
         electron.send("toggle-dev-tools");
@@ -470,18 +676,19 @@ export default class App extends Component {
       }
       case "Escape": {
         this.state.settingsOpen = false;
+        this.state.showSuggestions = false;
         this.focusSearchBar();
         return;
       }
-      case "F": {
+      case "f": {
         if (ctrlKey) this.focusSearchBar();
         return;
       }
       case "I": {
-        if (ctrlKey && shiftKey) electron.send("toggle-dev-tools");
+        if (ctrlKey) electron.send("toggle-dev-tools");
         return;
       }
-      case "R": {
+      case "r": {
         if (ctrlKey) location.reload();
         return;
       }
@@ -513,9 +720,6 @@ export default class App extends Component {
   }
 
   private reset(...whiteListed: string[]): void {
-    if (!whiteListed.includes("currentSearchId")) {
-      this.currentSearchId = 0;
-    }
     const newState = getDefaultState();
     for (const key of whiteListed) {
       delete newState[key as keyof typeof newState];
@@ -526,8 +730,13 @@ export default class App extends Component {
   private async search(): Promise<void> {
     this.reset("query", "ext");
     const { ext, query } = this.state;
-    let finalQuery = query;
-    if (ext !== "all" && !new RegExp(ext).test(finalQuery)) {
+    let finalQuery = cleanQuery(query);
+    if (!finalQuery) {
+      this.state.urls = [];
+      return;
+    }
+    this.state.searching = true;
+    if (ext !== "all") {
       finalQuery += " " + ext;
     }
     const result = await this.searchCache.get(finalQuery);
@@ -537,20 +746,15 @@ export default class App extends Component {
       this.state.urls = result;
       this.focusImage(0, true);
     }
+    this.state.searching = false;
   }
 
-  private setFocusedImage(
-    set: boolean,
-    { target }: { target: HTMLDivElement }
-  ): void {
-    this.state.focusedImage = set ? this.getImageSrc(target) : null;
+  private setFocusedImage(set: boolean, target: HTMLElement | Event): void {
+    this.state.focusedImage = set ? this.getImage(target)?.src! : null;
   }
 
-  private setHoveredImage(
-    set: boolean,
-    { target }: { target: HTMLDivElement }
-  ): void {
-    this.state.hoveredImage = set ? this.getImageSrc(target) : null;
+  private setHoveredImage(set: boolean, target: HTMLElement | Event): void {
+    this.state.hoveredImage = set ? this.getImage(target)?.src! : null;
   }
 
   private updateConfig(): void {

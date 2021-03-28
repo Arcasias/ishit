@@ -25,3 +25,8 @@ $body-bg: $gray-100;
 .modal {
   display: block !important;
 }
+
+// Override dropdowns to be opened by default
+.dropdown-menu {
+  display: block !important;
+}
