@@ -1,0 +1,64 @@
+{
+  "name": "ishit",
+  "version": "0.0.1",
+  "description": "image Search from Human Input Text",
+  "main": "dist/electron/main.js",
+  "scripts": {
+    "prettier": "prettier --write \"./src/**/*.{ts,json}\"",
+    "build:ts": "tsc",
+    "build:client": "browserify dist/client/app.js -o dist/client-bundle.js --no-browser-field --no-builtins && copy \".\\src\\index.html\" \".\\dist\\index.html\"",
+    "build:css": "sass src/client/style:dist/client/style",
+    "minify": "node minify.js",
+    "build": "npm run prettier && npm run build:ts && npm run build:client && npm run build:css && npm run minify",
+    "dev": "npm run build:ts && npm run build:client && npm run build:css && npm start",
+    "local": "electron dist/electron/main.js",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "npm run build && electron-forge make"
+  },
+  "keywords": [],
+  "author": "Julien Mougenot",
+  "license": "ISC",
+  "devDependencies": {
+    "@electron-forge/cli": "^6.0.0-beta.54",
+    "@electron-forge/maker-deb": "^6.0.0-beta.54",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.54",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.54",
+    "@electron-forge/maker-zip": "^6.0.0-beta.54",
+    "bootstrap": "^4.6.0",
+    "browserify": "^17.0.0",
+    "electron": "^12.0.2",
+    "prettier": "^2.2.1",
+    "sass": "^1.32.8"
+  },
+  "dependencies": {
+    "@odoo/owl": "^1.2.4"
+  },
+  "config": {
+    "forge": {
+      "packagerConfig": {},
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "ishit"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
+  }
+}
