@@ -1,3 +1,5 @@
+import { IpcRendererEvent } from "electron";
+
 export function getGoogleImageUrl(query: string): string {
   const formatted = query.replace(/\s+/g, "+");
   return `https://www.google.com/search?q=${formatted}&tbm=isch`;
@@ -24,4 +26,21 @@ export function log(...message: string[]): void {
 
 export function range(n: number): number[] {
   return [...new Array(n)].map((_, i) => i);
+}
+
+export interface APIBridge {
+  send: (channel: string, ...args: any[]) => void;
+  on: (
+    channel: string,
+    listener: (event: IpcRendererEvent, ...args: any[]) => void
+  ) => Electron.IpcRenderer;
+}
+
+export function getApi(globalObject: { electron?: APIBridge }): APIBridge {
+  return (
+    globalObject.electron ?? {
+      send(...args: any[]): any {},
+      on(...args: any[]): any {},
+    }
+  );
 }

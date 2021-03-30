@@ -1,5 +1,6 @@
 node_modules
-dist
+dist/*
+!dist/client-bundle.min.js
 out
 package-lock.json
 ishit.rar

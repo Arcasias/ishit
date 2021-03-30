@@ -1,19 +1,18 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
-import { ipcRendererLog } from "./../common/utils";
+import { APIBridge, ipcRendererLog } from "./../common/utils";
 
-export const electronPublicApi = {
-  send: (channel: string, ...args: any[]): void => {
+contextBridge.exposeInMainWorld("electron", {
+  send(channel, ...args) {
     ipcRendererLog(channel, ...args);
-    return ipcRenderer.send(channel, ...args);
+    ipcRenderer.send(channel, ...args);
   },
-  on: (
-    channel: string,
-    listener: (event: IpcRendererEvent, ...args: any[]) => void
-  ) =>
-    ipcRenderer.on(channel, (event: IpcRendererEvent, ...args: any[]): void => {
-      ipcRendererLog(channel, ...args);
-      return listener(event, ...args);
-    }),
-};
-
-contextBridge.exposeInMainWorld("electron", electronPublicApi);
+  on(channel, listener) {
+    return ipcRenderer.on(
+      channel,
+      (event: IpcRendererEvent, ...args: any[]): void => {
+        ipcRendererLog(channel, ...args);
+        return listener(event, ...args);
+      }
+    );
+  },
+} as APIBridge);

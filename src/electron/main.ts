@@ -28,7 +28,7 @@ function onReady(): void {
     },
   });
   window.setMenu(null);
-  window.loadFile(`dist/index.html`);
+  window.loadFile(`index.html`);
   window.on("closed", () => app.quit());
 
   window.webContents.session.on("will-download", (_, item) => {
