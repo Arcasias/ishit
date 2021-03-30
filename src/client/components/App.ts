@@ -1,23 +1,23 @@
 import { Component, hooks, tags } from "@odoo/owl";
 import { OwlEvent } from "@odoo/owl/dist/types/core/owl_event";
-import { getGoogleImageUrl, log, range } from "../../common/utils";
-import { electronPublicApi } from "../../electron/preload";
+import { getApi, getGoogleImageUrl, log, range } from "../../common/utils";
 import Cache from "../classes/Cache";
+import { StorageManager } from "../classes/StorageManager";
 import Dropdown, { DropdownItem } from "./DropdownComponent";
 import ImageComponent from "./ImageComponent";
 
-declare const electron: typeof electronPublicApi;
-
 type Extension = "all" | "gif" | "png";
 
+const api = getApi(window as any);
 const { xml: html, css } = tags;
 const { useExternalListener, useRef, useState } = hooks;
 
 const IMAGE_COLS = 5;
 const IMAGE_ROWS = 5;
-const IMAGE_URL_RE = /"https?:\/\/[\w\/\.-]+\.(png|jpg|jpeg|gif)"/g;
+const IMAGE_URL_RE = /"https:\/\/[\w\/\.-]+\.(png|jpg|jpeg|gif)"/g;
 const EXTENSION_RE = /\b(gif|png)\b/g;
 const HIGHTLIGHT_COLOR = "#ff0080";
+const URL_PREFIX = "https://";
 
 function cleanQuery(query: string): string {
   return query
@@ -26,12 +26,6 @@ function cleanQuery(query: string): string {
     .replace(/[\s\n_-]+/g, " ") // unifies white spaces
     .trim()
     .toLowerCase();
-}
-
-function getDefaultConfig() {
-  return {
-    downloadPath: <string | null>null,
-  };
 }
 
 function getDefaultState() {
@@ -59,7 +53,7 @@ export default class App extends Component {
   //---------------------------------------------------------------------------
   static template = html`
     <div class="app container-fluid">
-      <t t-set="history" t-value="getHistory()" />
+      <t t-set="favorites" t-value="getFavorites()" />
       <t t-if="state.settingsOpen">
         <div class="modal-backdrop show"></div>
         <div class="modal" tabindex="-1" role="dialog">
@@ -84,7 +78,6 @@ export default class App extends Component {
                     type="text"
                     class="form-control"
                     t-on-change="onDownloadPathChanged"
-                    t-model="config.downloadPath"
                   />
                 </div>
               </div>
@@ -193,13 +186,20 @@ export default class App extends Component {
                 </button>
               </li>
             </ul>
+            <button class="btn text-warning mr-2" t-on-click="toggleFavorite">
+              <i
+                t-if="favoritesManager.has(currentSearch)"
+                class="fas fa-star"
+              ></i>
+              <i t-else="" class="far fa-star"></i>
+            </button>
             <Dropdown
-              t-if="history.length"
-              title="'History'"
-              items="history"
-              t-on-select.stop="applyHistoryValue"
-              t-on-clear.stop="onHistoryClear"
-              t-on-remove.stop="onHistoryRemove"
+              t-if="favorites.length"
+              title="'Favorites'"
+              items="favorites"
+              t-on-select.stop="applyFavorite"
+              t-on-clear.stop="clearFavorites"
+              t-on-remove.stop="removeFavorite"
             />
           </nav>
           <div class="response-wrapper">
@@ -264,13 +264,13 @@ export default class App extends Component {
             >Search images in the search bar above</span
           >
           <Dropdown
-            t-if="history.length"
-            title="'Browse search history'"
-            items="history"
+            t-if="favorites.length"
+            title="'Browse your favorites'"
+            items="favorites"
             large="true"
-            t-on-select.stop="applyHistoryValue"
-            t-on-clear.stop="onHistoryClear"
-            t-on-remove.stop="onHistoryRemove"
+            t-on-select.stop="applyFavorite"
+            t-on-clear.stop="clearFavorites"
+            t-on-remove.stop="removeFavorite"
           />
         </nav>
       </div>
@@ -350,13 +350,17 @@ export default class App extends Component {
   // PROPERTIES
   //---------------------------------------------------------------------------
 
-  public config = useState(getDefaultConfig());
   public state = useState(getDefaultState());
 
-  private currentSearchId = 0;
+  private currentSearch: string = "";
+  private favoritesManager = new StorageManager<string[]>("fav", {
+    parse: (urls) => urls.split(",").map((u) => URL_PREFIX + u),
+    serialize: (urls) => urls.map((u) => u.slice(URL_PREFIX.length)).join(","),
+  });
+  private configManager = new StorageManager<any>("cfg");
   private hasClipboardAccess = false;
   private toFocus: number | null = null;
-  private searchCache = new Cache("urls", (key) => this.fetchUrls(key));
+  private searchCache = new Cache((key) => this.fetchUrls(key));
   private searchInputRef = useRef("search-input");
   private previewImageRef = useRef("preview-image");
 
@@ -382,16 +386,15 @@ export default class App extends Component {
   }
 
   public async willStart() {
+    // Load favorites
+    const favorites = this.favoritesManager.load();
     // Load search cache
-    this.searchCache.load();
+    this.searchCache.load(favorites);
     // Load config
-    const config = localStorage.getItem("config");
-    if (!config) {
-      this.updateConfig();
-    } else {
-      const entries = JSON.parse(config);
-      Object.assign(this.config, Object.fromEntries(entries));
-      electron.send("set-download-path", this.config.downloadPath);
+    this.configManager.load();
+    const downloadPath = this.configManager.get("downloadPath");
+    if (downloadPath) {
+      api.send("set-download-path", downloadPath);
     }
     // Fetch clipboard permissions
     const status = await navigator.permissions.query({
@@ -414,12 +417,18 @@ export default class App extends Component {
   // PRIVATE
   //---------------------------------------------------------------------------
 
-  private applyHistoryValue({ detail }: OwlEvent<DropdownItem>): void {
+  private applyFavorite({ detail }: OwlEvent<DropdownItem>): void {
     this.state.query = detail.value;
     this.state.ext = detail.badge
       ? (detail.badge.toLowerCase() as Extension)
       : "all";
     this.search();
+  }
+
+  private clearFavorites(): void {
+    this.favoritesManager.clear();
+    this.state.query = "";
+    this.forceUpdate();
   }
 
   private async copyImage(target: HTMLElement | Event): Promise<void> {
@@ -448,24 +457,19 @@ export default class App extends Component {
     await navigator.clipboard.writeText(url);
   }
 
-  private async fetchUrls(query: string): Promise<string[] | false> {
-    const searchId = ++this.currentSearchId;
+  private async fetchUrls(query: string): Promise<string[]> {
     const queryStepTimings: number[] = [];
-    log(`Search query {{#ff0080}}${searchId}{{inherit}} started.`);
+    log(`Search query started.`);
 
     // Query
     const queryTime = Date.now();
     const response = await fetch(getGoogleImageUrl(query));
     queryStepTimings.push(Date.now() - queryTime);
 
-    if (this.currentSearchId !== searchId) return false;
-
     // Stringifying
     const parsingTime = Date.now();
     const textResponse = await response.text();
     queryStepTimings.push(Date.now() - parsingTime);
-
-    if (this.currentSearchId !== searchId) return false;
 
     // Extracting
     const extractionTime = Date.now();
@@ -474,7 +478,7 @@ export default class App extends Component {
 
     log(
       [
-        `Search query {{#ff0080}}${searchId}{{inherit}}: "${query}" finished for a total of ${matches.length} results.`,
+        `Search query "${query}" finished for a total of ${matches.length} results.`,
         `{{#00d000}}>{{inherit}} URL loading took {{#ff0080}}${queryStepTimings.shift()}{{inherit}}ms`,
         `{{#00d000}}>{{inherit}} Response stringifying took {{#ff0080}}${queryStepTimings.shift()}{{inherit}}ms`,
         `{{#00d000}}>{{inherit}} Image URLs extraction took {{#ff0080}}${queryStepTimings.shift()}{{inherit}}ms`,
@@ -518,11 +522,11 @@ export default class App extends Component {
     return this.state.urls.slice(start, start + count);
   }
 
-  private getHistory(): DropdownItem[] {
-    return this.getSuggestions(true).map((suggestion) => {
+  private getFavorites(): DropdownItem[] {
+    return this.favoritesManager.keys().map((favorite) => {
       let badge: string | null = null;
-      const id = suggestion;
-      const value = suggestion
+      const id = favorite;
+      const value = favorite
         .replace(EXTENSION_RE, (ext: string) => {
           badge = ext.toUpperCase();
           return "";
@@ -530,6 +534,14 @@ export default class App extends Component {
         .trim();
       return { id, value, badge };
     });
+  }
+
+  private getFullQuery(): string {
+    const { query, ext } = this.state;
+    let cleanedQuery = cleanQuery(query);
+    if (!cleanedQuery) return "";
+    if (ext !== "all") cleanedQuery += " " + ext;
+    return cleanedQuery;
   }
 
   private getImage(target: HTMLElement | Event): HTMLImageElement | null {
@@ -548,36 +560,23 @@ export default class App extends Component {
     return size ? `${size[0]}x${size[1]}` : "loading...";
   }
 
-  private getSuggestions(raw: boolean = false): string[] {
-    const keys = this.searchCache.getKeys();
-    if (raw) return keys;
-    const cleanedQuery = cleanQuery(this.state.query);
-    if (cleanedQuery.length) {
-      return [...new Set(keys.map(cleanQuery).filter(Boolean))].filter(
-        (q) => q !== cleanedQuery && q.startsWith(cleanedQuery)
-      );
+  private getSuggestions(): string[] {
+    const query = cleanQuery(this.state.query);
+    if (query) {
+      return [
+        ...new Set(this.searchCache.getKeys().map(cleanQuery).filter(Boolean)),
+      ].filter((q) => q !== query && q.startsWith(query));
     } else {
       return [];
     }
   }
 
-  private onDownloadPathChanged(): void {
-    if (this.config.downloadPath) {
-      this.config.downloadPath = this.config.downloadPath.replace(/['"]+/, "");
-    }
-    this.updateConfig();
-    electron.send("set-download-path", this.config.downloadPath);
-  }
-
-  private onHistoryClear(): void {
-    this.searchCache.invalidate();
-    this.state.query = "";
-    this.forceUpdate();
-  }
-
-  private onHistoryRemove({ detail }: OwlEvent<DropdownItem>): void {
-    this.searchCache.invalidate(detail.id);
-    this.forceUpdate();
+  private onDownloadPathChanged(ev: Event): void {
+    const target = ev.target as HTMLInputElement;
+    const downloadPath = target.value.replace(/['"]+/g, "").trim();
+    target.value = downloadPath;
+    this.configManager.set("downloadPath", downloadPath);
+    api.send("set-download-path", downloadPath);
   }
 
   private onImageKeydown(index: number, ev: KeyboardEvent): void {
@@ -667,7 +666,7 @@ export default class App extends Component {
   private onWindowKeydown({ key, ctrlKey }: KeyboardEvent): void {
     switch (key) {
       case "F12": {
-        electron.send("toggle-dev-tools");
+        api.send("toggle-dev-tools");
         return;
       }
       case "F5": {
@@ -685,7 +684,7 @@ export default class App extends Component {
         return;
       }
       case "I": {
-        if (ctrlKey) electron.send("toggle-dev-tools");
+        if (ctrlKey) api.send("toggle-dev-tools");
         return;
       }
       case "r": {
@@ -719,6 +718,11 @@ export default class App extends Component {
     return range(n);
   }
 
+  private removeFavorite({ detail }: OwlEvent<DropdownItem>): void {
+    this.favoritesManager.remove(detail.id);
+    this.forceUpdate();
+  }
+
   private reset(...whiteListed: string[]): void {
     const newState = getDefaultState();
     for (const key of whiteListed) {
@@ -729,24 +733,29 @@ export default class App extends Component {
 
   private async search(): Promise<void> {
     this.reset("query", "ext");
-    const { ext, query } = this.state;
-    let finalQuery = cleanQuery(query);
-    if (!finalQuery) {
+    const query = this.getFullQuery();
+    this.currentSearch = query;
+    if (!query) {
       this.state.urls = [];
       return;
     }
+    let result: string[] | null = null;
+    let error: Error | null = null;
     this.state.searching = true;
-    if (ext !== "all") {
-      finalQuery += " " + ext;
+    try {
+      result = await this.searchCache.get(query);
+    } catch (err) {
+      error = err;
     }
-    const result = await this.searchCache.get(finalQuery);
-    if (result === false) {
-      this.searchCache.invalidate(finalQuery);
-    } else {
-      this.state.urls = result;
-      this.focusImage(0, true);
+    if (query === this.currentSearch) {
+      if (result) {
+        this.state.urls = result;
+        this.focusImage(0, true);
+      } else {
+        throw error;
+      }
+      this.state.searching = false;
     }
-    this.state.searching = false;
   }
 
   private setFocusedImage(set: boolean, target: HTMLElement | Event): void {
@@ -757,8 +766,11 @@ export default class App extends Component {
     this.state.hoveredImage = set ? this.getImage(target)?.src! : null;
   }
 
-  private updateConfig(): void {
-    const entries = Object.entries(this.config);
-    localStorage.setItem("config", JSON.stringify(entries));
+  private toggleFavorite() {
+    const query = this.currentSearch;
+    if (!this.favoritesManager.remove(query)) {
+      this.favoritesManager.set(query, this.state.urls);
+    }
+    this.forceUpdate();
   }
 }

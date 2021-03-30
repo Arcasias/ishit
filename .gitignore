@@ -1,5 +1,6 @@
 node_modules
-dist
+dist/*
+!dist/client-bundle.js
+!dist/style.css
 out
 package-lock.json
-ishit.rar

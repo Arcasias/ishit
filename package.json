@@ -1,13 +1,13 @@
 {
   "name": "ishit",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "image Search from Human Input Text",
   "main": "dist/electron/main.js",
   "scripts": {
     "prettier": "prettier --write \"./src/**/*.{ts,json}\"",
     "build:ts": "tsc",
-    "build:client": "browserify dist/client/app.js -o dist/client-bundle.js --no-browser-field --no-builtins && copy \".\\src\\index.html\" \".\\dist\\index.html\"",
-    "build:css": "sass src/client/style:dist/client/style",
+    "build:client": "browserify dist/client/app.js -o dist/client-bundle.js --no-browser-field --no-builtins",
+    "build:css": "sass src/client/style:dist/client/style && copy \".\\dist\\client\\style\\bootstrap.css\" \".\\dist\\style.css\"",
     "minify": "node minify.js",
     "build": "npm run prettier && npm run build:ts && npm run build:client && npm run build:css && npm run minify",
     "dev": "npm run build && npm start",

@@ -1,25 +1,20 @@
 export default class Cache<T> {
   private entries: { [key: string]: T } = {};
-  private name: string;
   private operation;
 
-  constructor(name: string, operation: (key: string) => Promise<T>) {
-    this.name = name;
+  constructor(operation: (key: string) => Promise<T>) {
     this.operation = operation;
   }
 
-  public load(): void {
-    const storageEntries = localStorage.getItem(this.name);
-    if (storageEntries) {
-      const entries = JSON.parse(storageEntries) as [string, T][];
-      Object.assign(this.entries, Object.fromEntries(entries));
+  public load(initialValues: [string, T][] | null): void {
+    if (initialValues) {
+      Object.assign(this.entries, Object.fromEntries(initialValues));
     }
   }
 
   public async get(key: string): Promise<T> {
     if (!(key in this.entries)) {
       this.entries[key] = await this.operation(key);
-      this.updateStorage();
     }
     return this.entries[key];
   }
@@ -34,11 +29,5 @@ export default class Cache<T> {
     } else {
       delete this.entries[key];
     }
-    this.updateStorage();
-  }
-
-  private updateStorage(): void {
-    const entries = Object.entries(this.entries);
-    localStorage.setItem(this.name, JSON.stringify(entries));
   }
 }
