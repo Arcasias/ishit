@@ -14,12 +14,12 @@ function onReady(): void {
     ipcMainLog("set-download-path", path);
     downloadPath = path;
   });
-
+  ipcMain.on("window-close", () => window.close());
+  ipcMain.on("window-minimize", () => window.minimize());
   const window = new BrowserWindow({
     width: 1500,
     height: 1000,
-    resizable: false,
-    fullscreenable: false,
+    frame: false,
     icon: join(__dirname, "../../icon.ico"),
     webPreferences: {
       contextIsolation: true,
@@ -29,7 +29,6 @@ function onReady(): void {
   });
   window.setMenu(null);
   window.loadFile(`index.html`);
-  window.on("closed", () => app.quit());
 
   window.webContents.session.on("will-download", (_, item) => {
     const filePath = downloadPath && join(downloadPath, item.getFilename());

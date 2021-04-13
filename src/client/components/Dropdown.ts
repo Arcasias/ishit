@@ -1,4 +1,5 @@
 import { Component, hooks, tags } from "@odoo/owl";
+import { Environment } from "../classes/Environment";
 
 const { xml: html, css } = tags;
 const { useExternalListener, useRef, useState } = hooks;
@@ -15,7 +16,7 @@ interface DropdownProps {
   large: boolean;
 }
 
-export default class DropdownComponent extends Component<DropdownProps> {
+export default class Dropdown extends Component<DropdownProps, Environment> {
   //---------------------------------------------------------------------------
   // TEMPLATE
   //---------------------------------------------------------------------------
@@ -35,10 +36,10 @@ export default class DropdownComponent extends Component<DropdownProps> {
           t-foreach="props.items"
           t-as="item"
           t-key="item.id"
+          href="#"
           class="dropdown-item"
           t-on-click="trigger('select', item)"
           t-on-keydown="onItemKeydown(item)"
-          href="#"
         >
           <span class="item-value">
             <t t-esc="item.value" />

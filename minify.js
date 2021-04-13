@@ -2,8 +2,11 @@ const querystring = require("querystring");
 const https = require("https");
 const fs = require("fs");
 
-const INPUT_FILE = "dist/client-bundle.js";
-const OUTPUT_FILE = INPUT_FILE;
+let [INPUT_FILE, OUTPUT_FILE] = process.argv.slice(2);
+
+if (!OUTPUT_FILE) {
+  OUTPUT_FILE = INPUT_FILE;
+}
 
 const bundle = fs.readFileSync(INPUT_FILE, "utf8");
 const query = querystring.stringify({ input: bundle });

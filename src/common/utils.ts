@@ -1,5 +1,10 @@
 import { IpcRendererEvent } from "electron";
 
+const defaultApiBridge: APIBridge = {
+  send(...args: any[]): any {},
+  on(...args: any[]): any {},
+};
+
 export function getGoogleImageUrl(query: string): string {
   const formatted = query.replace(/\s+/g, "+");
   return `https://www.google.com/search?q=${formatted}&tbm=isch`;
@@ -36,11 +41,6 @@ export interface APIBridge {
   ) => Electron.IpcRenderer;
 }
 
-export function getApi(globalObject: { electron?: APIBridge }): APIBridge {
-  return (
-    globalObject.electron ?? {
-      send(...args: any[]): any {},
-      on(...args: any[]): any {},
-    }
-  );
+export function getApi(globalObject: any): APIBridge {
+  return globalObject.electron ?? defaultApiBridge;
 }

@@ -1,4 +1,5 @@
 import { Component, tags, useState } from "@odoo/owl";
+import { Environment } from "../classes/Environment";
 
 const { xml: html, css } = tags;
 
@@ -7,7 +8,7 @@ interface ImageProps {
   alt: string;
 }
 
-export default class ImageComponent extends Component<ImageProps> {
+export default class ImageComponent extends Component<ImageProps, Environment> {
   //---------------------------------------------------------------------------
   // TEMPLATE
   //---------------------------------------------------------------------------
