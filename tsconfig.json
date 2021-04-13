@@ -4,6 +4,7 @@
     "alwaysStrict": true,
     "sourceMap": false,
     "removeComments": true,
+    "resolveJsonModule": true,
     "moduleResolution": "node",
     "module": "CommonJS",
     "target": "ES6",

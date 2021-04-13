@@ -1,14 +1,17 @@
 import { Component, hooks, tags } from "@odoo/owl";
 import { OwlEvent } from "@odoo/owl/dist/types/core/owl_event";
 import { getApi, getGoogleImageUrl, log, range } from "../../common/utils";
+import { name } from "../../package.min.json";
 import Cache from "../classes/Cache";
 import { StorageManager } from "../classes/StorageManager";
 import Dropdown, { DropdownItem } from "./DropdownComponent";
 import ImageComponent from "./ImageComponent";
+import WindowControls from "./WindowControls";
 
 type Extension = "all" | "gif" | "png";
 
-const api = getApi(window as any);
+const api = getApi(window);
+const isWindow = Boolean(api);
 const { xml: html, css } = tags;
 const { useExternalListener, useRef, useState } = hooks;
 
@@ -18,6 +21,7 @@ const IMAGE_URL_RE = /"https:\/\/[\w\/\.-]+\.(png|jpg|jpeg|gif)"/g;
 const EXTENSION_RE = /\b(gif|png)\b/g;
 const HIGHTLIGHT_COLOR = "#ff0080";
 const URL_PREFIX = "https://";
+const NOTIFICATION_DELAY = 2500;
 
 function cleanQuery(query: string): string {
   return query
@@ -45,21 +49,65 @@ function getDefaultState() {
   };
 }
 
+function useAnimation<T>(refString: string, animationName: string) {
+  const ref = useRef(refString);
+  const state = useState({ value: <T | null>null });
+  const enterCls = `${animationName}-enter`;
+  const leaveCls = `${animationName}-leave`;
+  let willBeInDom = false;
+
+  hooks.onPatched(() => {
+    if (willBeInDom && ref.el) {
+      willBeInDom = false;
+      let isEntering = true;
+      ref.el.addEventListener("animationend", () => {
+        if (!ref.el) {
+          return;
+        }
+        if (isEntering) {
+          ref.el.classList.remove(enterCls);
+          isEntering = false;
+        } else {
+          ref.el.classList.remove(leaveCls);
+          state.value = null;
+        }
+      });
+      ref.el.classList.add(enterCls);
+    }
+  });
+
+  return {
+    get value() {
+      return state.value;
+    },
+    set value(val: T | null) {
+      if (val === null) {
+        ref.el?.classList.add(leaveCls);
+      } else {
+        state.value = val;
+        if (!ref.el) {
+          willBeInDom = true;
+        }
+      }
+    },
+  };
+}
+
 export default class App extends Component {
-  static components = { ImageComponent, Dropdown };
+  static components = { ImageComponent, Dropdown, WindowControls };
 
   //---------------------------------------------------------------------------
   // TEMPLATE
   //---------------------------------------------------------------------------
   static template = html`
-    <div class="app container-fluid">
+    <div class="app">
       <t t-set="favorites" t-value="getFavorites()" />
       <t t-if="state.settingsOpen">
         <div class="modal-backdrop show"></div>
         <div class="modal" tabindex="-1" role="dialog">
           <div class="modal-dialog" role="document">
             <div class="modal-content">
-              <div class="modal-header">
+              <header class="modal-header">
                 <h5 class="modal-title">Settings</h5>
                 <button
                   type="button"
@@ -68,20 +116,21 @@ export default class App extends Component {
                 >
                   <i class="fas fa-times"></i>
                 </button>
-              </div>
-              <div class="modal-body">
-                <div class="input-group">
+              </header>
+              <main class="modal-body">
+                <div t-if="isWindow" class="input-group">
                   <div class="input-group-prepend">
                     <div class="input-group-text">Download path</div>
                   </div>
                   <input
                     type="text"
                     class="form-control"
+                    t-att-value="configManager.get('downloadPath')"
                     t-on-change="onDownloadPathChanged"
                   />
                 </div>
-              </div>
-              <div class="modal-footer">
+              </main>
+              <footer class="modal-footer">
                 <button
                   type="button"
                   class="btn btn-primary"
@@ -89,180 +138,190 @@ export default class App extends Component {
                 >
                   Ok
                 </button>
-              </div>
+              </footer>
             </div>
           </div>
         </div>
       </t>
-      <nav class="navbar my-3">
-        <h1 class="navbar-brand m-0">
-          <span class="text-primary">i</span>mage
-          <span class="text-primary">S</span>earch from
-          <span class="text-primary">H</span>uman
-          <span class="text-primary">I</span>nput
-          <span class="text-primary">T</span>ext
-        </h1>
-        <form class="form-inline ml-auto mr-3" t-on-submit.prevent="search">
-          <select class="form-control text-primary mr-3" t-model="state.ext">
-            <option
-              t-foreach="exts"
-              t-as="ext"
-              t-key="ext"
-              t-att-value="ext"
-              t-esc="ext.toUpperCase()"
-            ></option>
-          </select>
-          <div class="input-group">
-            <input
-              class="form-control search-input"
-              type="text"
-              placeholder="Search on Google Image"
-              aria-label="Search"
-              t-ref="search-input"
-              t-model="state.query"
-              t-on-focus="state.showSuggestions = true"
-              t-on-blur="state.showSuggestions = false"
-              t-on-keydown="onSearchKeydown"
-            />
-            <t t-set="suggestions" t-value="getSuggestions()" />
-            <div
-              t-if="state.showSuggestions and suggestions.length"
-              class="dropdown-menu"
-            >
-              <a
-                t-foreach="suggestions"
-                t-as="query"
-                t-key="query_index"
-                t-att-class="{ active: state.activeSuggestion === query_index }"
-                class="dropdown-item"
-                href="#"
-                t-esc="query"
-              ></a>
-            </div>
-            <div class="input-group-append">
-              <button class="btn btn-primary" type="submit">Search</button>
-              <button class="btn text-primary" type="button" t-on-click="reset">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-          </div>
-        </form>
-        <button
-          type="button"
-          class="btn btn-outline-primary"
-          t-on-click="state.settingsOpen = true"
-        >
-          <i class="fas fa-cog"></i>
-        </button>
-      </nav>
-      <div class="row" t-if="state.urls.length">
-        <div class="col">
-          <nav class="nav mb-3">
-            <ul class="pagination m-0 mr-auto">
-              <li class="page-item" t-on-click.prevent="pagePrev()">
-                <button
-                  class="page-link"
-                  t-att-disabled="state.pageIndex lte 0"
-                >
-                  <i class="fas fa-chevron-left"></i>
-                </button>
-              </li>
-              <li
-                t-foreach="range(pageCount)"
-                t-as="page"
-                t-key="page"
-                class="page-item"
-                t-att-class="{ active: state.pageIndex === page }"
-                t-on-click.prevent="pageSet(page, null)"
+      <WindowControls t-if="isWindow" />
+      <header class="header">
+        <nav class="navbar mb-3">
+          <h1 class="navbar-brand m-0">
+            <span class="text-primary">i</span>mage
+            <span class="text-primary">S</span>earch from
+            <span class="text-primary">H</span>uman
+            <span class="text-primary">I</span>nput
+            <span class="text-primary">T</span>ext
+          </h1>
+          <form class="form-inline ml-auto mr-3" t-on-submit.prevent="search">
+            <select class="form-control text-primary mr-3" t-model="state.ext">
+              <option
+                t-foreach="exts"
+                t-as="ext"
+                t-key="ext"
+                t-att-value="ext"
+                t-esc="ext.toUpperCase()"
+              ></option>
+            </select>
+            <div class="input-group">
+              <input
+                class="form-control search-input"
+                type="text"
+                placeholder="Search on Google Image"
+                aria-label="Search"
+                t-ref="search-input"
+                t-model="state.query"
+                t-on-focus="state.showSuggestions = true"
+                t-on-blur="state.showSuggestions = false"
+                t-on-keydown="onSearchKeydown"
+              />
+              <t t-set="suggestions" t-value="getSuggestions()" />
+              <div
+                t-if="state.showSuggestions and suggestions.length"
+                class="dropdown-menu"
               >
-                <button class="page-link" t-esc="page + 1"></button>
-              </li>
-              <li class="page-item" t-on-click.prevent="pageNext()">
+                <a
+                  t-foreach="suggestions"
+                  t-as="query"
+                  t-key="query_index"
+                  t-att-class="{ active: state.activeSuggestion === query_index }"
+                  class="dropdown-item"
+                  href="#"
+                  t-esc="query"
+                ></a>
+              </div>
+              <div class="input-group-append">
+                <button class="btn btn-primary" type="submit">Search</button>
                 <button
-                  class="page-link"
-                  t-att-disabled="state.pageIndex gte pageCount - 1"
+                  class="btn text-primary"
+                  type="button"
+                  t-on-click="reset"
                 >
-                  <i class="fas fa-chevron-right"></i>
+                  <i class="fas fa-times"></i>
                 </button>
+              </div>
+            </div>
+          </form>
+          <button
+            type="button"
+            class="btn btn-outline-primary"
+            t-on-click="state.settingsOpen = true"
+          >
+            <i class="fas fa-cog"></i>
+          </button>
+        </nav>
+      </header>
+      <main class="main container-fluid">
+        <t t-if="state.urls.length">
+          <section class="col">
+            <nav class="pager nav mb-3">
+              <ul class="pagination m-0 mr-auto">
+                <li class="page-item" t-on-click.prevent="pagePrev()">
+                  <button
+                    class="page-link"
+                    t-att-disabled="state.pageIndex lte 0"
+                  >
+                    <i class="fas fa-chevron-left"></i>
+                  </button>
+                </li>
+                <li
+                  t-foreach="range(pageCount)"
+                  t-as="page"
+                  t-key="page"
+                  class="page-item"
+                  t-att-class="{ active: state.pageIndex === page }"
+                  t-on-click.prevent="pageSet(page, null)"
+                >
+                  <button class="page-link" t-esc="page + 1"></button>
+                </li>
+                <li class="page-item" t-on-click.prevent="pageNext()">
+                  <button
+                    class="page-link"
+                    t-att-disabled="state.pageIndex gte pageCount - 1"
+                  >
+                    <i class="fas fa-chevron-right"></i>
+                  </button>
+                </li>
+              </ul>
+              <button class="btn text-warning mr-2" t-on-click="toggleFavorite">
+                <i
+                  t-if="favoritesManager.has(currentSearch)"
+                  class="fas fa-star"
+                ></i>
+                <i t-else="" class="far fa-star"></i>
+              </button>
+              <Dropdown
+                t-if="favorites.length"
+                title="'Favorites'"
+                items="favorites"
+                t-on-select.stop="applyFavorite"
+                t-on-clear.stop="clearFavorites"
+                t-on-remove.stop="removeFavorite"
+              />
+            </nav>
+            <ul class="image-gallery m-0">
+              <li
+                t-foreach="getCurrentPageUrls()"
+                t-as="url"
+                t-key="url_index"
+                class="image-wrapper"
+                tabindex="1"
+                t-att-class="{ empty: !url }"
+                t-on-mouseenter="setHoveredImage(true)"
+                t-on-mouseleave="setHoveredImage(false)"
+                t-on-focus="setFocusedImage(true)"
+                t-on-click="copyImage"
+                t-on-keydown="onImageKeydown(url_index)"
+              >
+                <ImageComponent src="url" t-on-load.stop="onImageLoad" />
               </li>
             </ul>
-            <button class="btn text-warning mr-2" t-on-click="toggleFavorite">
-              <i
-                t-if="favoritesManager.has(currentSearch)"
-                class="fas fa-star"
-              ></i>
-              <i t-else="" class="far fa-star"></i>
-            </button>
-            <Dropdown
-              t-if="favorites.length"
-              title="'Favorites'"
-              items="favorites"
-              t-on-select.stop="applyFavorite"
-              t-on-clear.stop="clearFavorites"
-              t-on-remove.stop="removeFavorite"
-            />
-          </nav>
-          <div class="response-wrapper">
-            <div
-              t-foreach="getCurrentPageUrls()"
-              t-as="url"
-              t-key="url_index"
-              class="image-wrapper"
-              tabindex="1"
-              t-att-class="{ empty: !url }"
-              t-on-mouseenter="setHoveredImage(true)"
-              t-on-mouseleave="setHoveredImage(false)"
-              t-on-focus="setFocusedImage(true)"
-              t-on-click="copyImage"
-              t-on-keydown="onImageKeydown(url_index)"
-            >
-              <ImageComponent src="url" t-on-load.stop="onImageLoad" />
+          </section>
+          <section class="col pl-0">
+            <div class="preview mr-0" t-if="activeImage">
+              <div class="image-wrapper">
+                <ImageComponent src="activeImage" t-ref="preview-image" />
+              </div>
+              <div class="image-options input-group">
+                <a
+                  class="btn btn-outline-primary mr-2"
+                  title="Download"
+                  download="download"
+                  t-att-href="activeImage"
+                  ><i class="fas fa-download"></i
+                ></a>
+                <button
+                  class="btn btn-outline-primary mr-2"
+                  title="Copy image"
+                  t-on-click="copyImage(previewImageRef.el)"
+                >
+                  <i class="fas fa-copy"></i>
+                </button>
+                <button
+                  class="btn btn-outline-primary mr-2"
+                  title="Copy URL"
+                  t-on-click="copyUrl(activeImage)"
+                >
+                  <i class="fas fa-code"></i>
+                </button>
+                <span
+                  class="input-group-text ml-auto"
+                  t-esc="getImageSize(activeImage)"
+                ></span>
+              </div>
             </div>
-          </div>
-        </div>
-        <div class="col pl-0">
-          <div class="preview mr-0" t-if="activeImage">
-            <div class="image-wrapper">
-              <ImageComponent src="activeImage" t-ref="preview-image" />
-            </div>
-            <div class="image-options input-group">
-              <a
-                class="btn btn-outline-primary mr-2"
-                title="Download"
-                download="download"
-                t-att-href="activeImage"
-                ><i class="fas fa-download"></i
-              ></a>
-              <button
-                class="btn btn-outline-primary mr-2"
-                title="Copy image"
-                t-on-click="copyImage(previewImageRef.el)"
+            <div t-else="" class="default-message">
+              <span class="message text-muted"
+                >Select an image to have more info</span
               >
-                <i class="fas fa-copy"></i>
-              </button>
-              <button
-                class="btn btn-outline-primary mr-2"
-                title="Copy URL"
-                t-on-click="copyUrl(activeImage)"
-              >
-                <i class="fas fa-code"></i>
-              </button>
-              <span
-                class="input-group-text ml-auto"
-                t-esc="getImageSize(activeImage)"
-              ></span>
             </div>
-          </div>
+          </section>
+        </t>
+        <div t-elif="state.searching" class="default-message">
+          <span class="message text-muted">Searching ...</span>
         </div>
-      </div>
-      <div t-elif="state.searching" class="no-urls text-muted">
-        <span class="default-message">Searching ...</span>
-      </div>
-      <div t-else="" class="no-urls text-muted">
-        <nav class="nav">
-          <span class="default-message mr-3"
-            >Search images in the search bar above</span
-          >
+        <div t-else="" class="default-message">
+          <span class="message text-muted mr-3">No images to display</span>
           <Dropdown
             t-if="favorites.length"
             title="'Browse your favorites'"
@@ -272,8 +331,15 @@ export default class App extends Component {
             t-on-clear.stop="clearFavorites"
             t-on-remove.stop="removeFavorite"
           />
-        </nav>
-      </div>
+        </div>
+        <div
+          t-if="notificationManager.value"
+          class="notification slide-right alert alert-success"
+          role="alert"
+          t-ref="notification"
+          t-esc="notificationManager.value"
+        ></div>
+      </main>
     </div>
   `;
 
@@ -282,14 +348,25 @@ export default class App extends Component {
   //---------------------------------------------------------------------------
   static style = css`
     .app {
-      height: 100%;
-
       input.search-input {
         width: 500px;
       }
+
+      .main {
+        position: relative;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+
+        .notification {
+          position: absolute;
+          top: 1rem;
+          opacity: 0.9;
+        }
+      }
     }
 
-    .response-wrapper {
+    .image-gallery {
       display: grid;
       grid-template-columns: repeat(${IMAGE_COLS}, ${100 / IMAGE_COLS}%);
       grid-template-rows: repeat(${IMAGE_ROWS}, ${100 / IMAGE_ROWS}%);
@@ -333,16 +410,20 @@ export default class App extends Component {
       }
     }
 
-    .no-urls {
-      height: 100%;
+    .default-message {
+      height: 75vh;
       display: flex;
       align-items: center;
       justify-content: center;
 
-      .default-message {
+      .message {
         font-size: 2rem;
         font-style: italic;
       }
+    }
+
+    .page-link[disabled] {
+      opacity: 0.4;
     }
   `;
 
@@ -359,6 +440,12 @@ export default class App extends Component {
   });
   private configManager = new StorageManager<any>("cfg");
   private hasClipboardAccess = false;
+  private isWindow = isWindow;
+  private notifyTimeout: number = 0;
+  private notificationManager = useAnimation<string>(
+    "notification",
+    "slide-right"
+  );
   private toFocus: number | null = null;
   private searchCache = new Cache((key) => this.fetchUrls(key));
   private searchInputRef = useRef("search-input");
@@ -404,6 +491,7 @@ export default class App extends Component {
   }
 
   public mounted() {
+    document.title = name;
     this.focusSearchBar();
   }
 
@@ -450,11 +538,13 @@ export default class App extends Component {
     );
     const data = [new ClipboardItem({ "image/png": blob })];
     await navigator.clipboard.write(data);
+    this.notify("Image copied!");
   }
 
   private async copyUrl(url: string | null): Promise<void> {
     if (!url || !this.hasClipboardAccess) return;
     await navigator.clipboard.writeText(url);
+    this.notify("URL copied!");
   }
 
   private async fetchUrls(query: string): Promise<string[]> {
@@ -463,7 +553,14 @@ export default class App extends Component {
 
     // Query
     const queryTime = Date.now();
-    const response = await fetch(getGoogleImageUrl(query));
+    const response = await fetch(getGoogleImageUrl(query), {
+      method: "GET",
+      mode: "cors",
+      headers: {
+        Origin: "https://www.google.com",
+        Referer: "https://www.google.com",
+      },
+    });
     queryStepTimings.push(Date.now() - queryTime);
 
     // Stringifying
@@ -494,7 +591,7 @@ export default class App extends Component {
       return;
     }
     const images = this.el!.querySelectorAll<HTMLDivElement>(
-      ".response-wrapper .image-wrapper"
+      ".image-gallery .image-wrapper"
     );
     const target = images[index];
     if (!target) return;
@@ -569,6 +666,14 @@ export default class App extends Component {
     } else {
       return [];
     }
+  }
+
+  private notify(message: string): void {
+    this.notificationManager.value = message;
+    window.clearTimeout(this.notifyTimeout);
+    this.notifyTimeout = window.setTimeout(() => {
+      this.notificationManager.value = null;
+    }, NOTIFICATION_DELAY);
   }
 
   private onDownloadPathChanged(ev: Event): void {

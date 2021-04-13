@@ -35,10 +35,10 @@ export default class DropdownComponent extends Component<DropdownProps> {
           t-foreach="props.items"
           t-as="item"
           t-key="item.id"
+          href="#"
           class="dropdown-item"
           t-on-click="trigger('select', item)"
           t-on-keydown="onItemKeydown(item)"
-          href="#"
         >
           <span class="item-value">
             <t t-esc="item.value" />
