@@ -35,8 +35,6 @@ function getDefaultState() {
   return {
     activeSuggestion: <number | null>null,
     ext: <Extension>"all",
-    focusedImage: <string | null>null,
-    hoveredImage: <string | null>null,
     imageSizes: <{ [url: string]: number[] | null }>{},
     pageIndex: <number>0,
     query: <string>"",
@@ -92,6 +90,36 @@ function useAnimation<T>(refString: string, animationName: string) {
   };
 }
 
+function useCustomStyle(
+  refString: string,
+  calcStyle: (el: HTMLElement) => string
+): void {
+  const ref = useRef(refString);
+  let isStyleApplied: boolean = false;
+  let style: string | null = null;
+
+  function applyStyle() {
+    if (isStyleApplied && !ref.el) {
+      isStyleApplied = false;
+    } else if (!isStyleApplied && ref.el) {
+      isStyleApplied = true;
+      if (!style) style = calcStyle(ref.el);
+      ref.el.setAttribute("style", style);
+    }
+  }
+
+  hooks.onMounted(applyStyle);
+  hooks.onPatched(applyStyle);
+
+  let resizeTimeout: number = 0;
+  useExternalListener(window, "resize", () => {
+    style = null;
+    isStyleApplied = false;
+    window.clearTimeout(resizeTimeout);
+    resizeTimeout = window.setTimeout(applyStyle, 100);
+  });
+}
+
 export default class App extends Component<{}, Environment> {
   static components = { ImageComponent, Dropdown, WindowControls };
 
@@ -108,16 +136,12 @@ export default class App extends Component<{}, Environment> {
             <div class="modal-content">
               <header class="modal-header">
                 <h5 class="modal-title">Settings</h5>
-                <button
-                  type="button"
-                  class="close"
-                  t-on-click="state.settingsOpen = false"
-                >
+                <button type="button" class="close" t-on-click="closeSettings">
                   <i class="fas fa-times"></i>
                 </button>
               </header>
               <main class="modal-body">
-                <div t-if="env.api" class="input-group">
+                <div t-if="env.isDesktop" class="input-group">
                   <div class="input-group-prepend">
                     <div class="input-group-text">Download path</div>
                   </div>
@@ -128,12 +152,25 @@ export default class App extends Component<{}, Environment> {
                     t-on-change="onDownloadPathChanged"
                   />
                 </div>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <div class="input-group-text">
+                      Background removal tolerance
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    class="form-control"
+                    t-att-value="configManager.get('bgTolerance', 3)"
+                    t-on-change="onBackgroundToleranceChanged"
+                  />
+                </div>
               </main>
               <footer class="modal-footer">
                 <button
                   type="button"
                   class="btn btn-primary"
-                  t-on-click="state.settingsOpen = false"
+                  t-on-click="closeSettings"
                 >
                   Ok
                 </button>
@@ -142,9 +179,9 @@ export default class App extends Component<{}, Environment> {
           </div>
         </div>
       </t>
-      <WindowControls t-if="env.api" />
+      <WindowControls t-if="env.isDesktop" />
       <header class="header">
-        <nav class="navbar mb-3">
+        <nav class="navbar">
           <h1 class="navbar-brand m-0">
             <span class="text-primary">i</span>mage
             <span class="text-primary">S</span>earch from
@@ -152,8 +189,40 @@ export default class App extends Component<{}, Environment> {
             <span class="text-primary">I</span>nput
             <span class="text-primary">T</span>ext
           </h1>
-          <form class="form-inline ml-auto mr-3" t-on-submit.prevent="search">
-            <select class="form-control text-primary mr-3" t-model="state.ext">
+          <button
+            type="button"
+            class="btn btn-outline-primary"
+            t-on-click="openSettings"
+          >
+            <i class="fas fa-cog"></i>
+          </button>
+        </nav>
+        <form class="form-inline navbar" t-on-submit.prevent="search">
+          <div class="btn-group mr-2">
+            <Dropdown
+              t-if="favorites.length"
+              title="'Favorites'"
+              items="favorites"
+              t-on-select.stop="applyFavorite"
+              t-on-clear.stop="clearFavorites"
+              t-on-remove.stop="removeFavorite"
+            />
+            <button
+              t-if="currentSearch"
+              class="btn btn-outline-primary"
+              type="button"
+              t-on-click="toggleFavorite"
+            >
+              <i
+                t-attf-class="{{ favoritesManager.has(currentSearch) ? 'fas' : 'far' }} fa-star text-warning"
+              ></i>
+            </button>
+          </div>
+          <div class="search-group input-group">
+            <select
+              class="extensions form-control text-primary"
+              t-model="state.ext"
+            >
               <option
                 t-foreach="exts"
                 t-as="ext"
@@ -162,58 +231,45 @@ export default class App extends Component<{}, Environment> {
                 t-esc="ext.toUpperCase()"
               ></option>
             </select>
-            <div class="input-group">
-              <input
-                class="form-control search-input"
-                type="text"
-                placeholder="Search on Google Image"
-                aria-label="Search"
-                t-ref="search-input"
-                t-model="state.query"
-                t-on-focus="state.showSuggestions = true"
-                t-on-blur="state.showSuggestions = false"
-                t-on-keydown="onSearchKeydown"
-              />
-              <t t-set="suggestions" t-value="getSuggestions()" />
-              <div
-                t-if="state.showSuggestions and suggestions.length"
-                class="dropdown-menu"
-              >
-                <a
-                  t-foreach="suggestions"
-                  t-as="query"
-                  t-key="query_index"
-                  t-att-class="{ active: state.activeSuggestion === query_index }"
-                  class="dropdown-item"
-                  href="#"
-                  t-esc="query"
-                ></a>
-              </div>
-              <div class="input-group-append">
-                <button class="btn btn-primary" type="submit">Search</button>
-                <button
-                  class="btn text-primary"
-                  type="button"
-                  t-on-click="reset"
-                >
-                  <i class="fas fa-times"></i>
-                </button>
-              </div>
+            <input
+              class="form-control search-input"
+              type="text"
+              placeholder="Search on Google Image"
+              aria-label="Search"
+              t-ref="search-input"
+              t-model="state.query"
+              t-on-focus="state.showSuggestions = true"
+              t-on-blur="state.showSuggestions = false"
+              t-on-keydown="onSearchKeydown"
+            />
+            <t t-set="suggestions" t-value="getSuggestions()" />
+            <div
+              t-if="state.showSuggestions and suggestions.length"
+              class="dropdown-menu"
+            >
+              <a
+                t-foreach="suggestions"
+                t-as="query"
+                t-key="query_index"
+                t-att-class="{ active: state.activeSuggestion === query_index }"
+                class="dropdown-item"
+                href="#"
+                t-esc="query"
+              ></a>
             </div>
-          </form>
-          <button
-            type="button"
-            class="btn btn-outline-primary"
-            t-on-click="state.settingsOpen = true"
-          >
-            <i class="fas fa-cog"></i>
-          </button>
-        </nav>
+            <div class="input-group-append">
+              <button class="btn btn-primary" type="submit">Search</button>
+              <button class="btn text-primary" type="button" t-on-click="reset">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </form>
       </header>
       <main class="main container-fluid">
         <t t-if="state.urls.length">
-          <section class="col">
-            <nav class="pager nav mb-3">
+          <section class="col p-0 mr-2">
+            <nav class="pager nav mb-2">
               <ul class="pagination m-0 mr-auto">
                 <li class="page-item" t-on-click.prevent="pagePrev()">
                   <button
@@ -242,75 +298,93 @@ export default class App extends Component<{}, Environment> {
                   </button>
                 </li>
               </ul>
-              <button class="btn text-warning mr-2" t-on-click="toggleFavorite">
-                <i
-                  t-if="favoritesManager.has(currentSearch)"
-                  class="fas fa-star"
-                ></i>
-                <i t-else="" class="far fa-star"></i>
-              </button>
-              <Dropdown
-                t-if="favorites.length"
-                title="'Favorites'"
-                items="favorites"
-                t-on-select.stop="applyFavorite"
-                t-on-clear.stop="clearFavorites"
-                t-on-remove.stop="removeFavorite"
-              />
+              <span
+                class="input-group-text ml-auto"
+                t-esc="state.urls.length + ' results'"
+              ></span>
             </nav>
-            <ul class="image-gallery m-0">
+            <ul class="image-gallery m-0" t-ref="image-gallery">
               <li
                 t-foreach="getCurrentPageUrls()"
                 t-as="url"
                 t-key="url_index"
                 class="image-wrapper"
                 tabindex="1"
-                t-att-class="{ empty: !url }"
+                t-att-class="{ empty: !url, selected: focusedImage and focusedImage.src === url }"
                 t-on-mouseenter="setHoveredImage(true)"
                 t-on-mouseleave="setHoveredImage(false)"
                 t-on-focus="setFocusedImage(true)"
-                t-on-click="copyImage"
+                t-on-click="copyActiveImage"
                 t-on-keydown="onImageKeydown(url_index)"
               >
                 <ImageComponent src="url" t-on-load.stop="onImageLoad" />
               </li>
             </ul>
           </section>
-          <section class="col pl-0">
+          <section class="col p-0">
             <div class="preview mr-0" t-if="activeImage">
-              <div class="image-wrapper">
-                <ImageComponent src="activeImage" t-ref="preview-image" />
-              </div>
-              <div class="image-options input-group">
+              <div class="image-actions btn-toolbar">
                 <a
                   class="btn btn-outline-primary mr-2"
                   title="Download"
                   download="download"
-                  t-att-href="activeImage"
+                  t-att-href="activeImage.src"
                   ><i class="fas fa-download"></i
                 ></a>
+                <div class="btn-group">
+                  <button
+                    class="btn btn-outline-primary"
+                    title="Copy image"
+                    t-on-click="copyActiveImage"
+                  >
+                    <i class="fas fa-copy"></i>
+                  </button>
+                  <button
+                    class="btn btn-outline-primary"
+                    title="Copy URL"
+                    t-on-click="copyActiveImageUrl"
+                  >
+                    <i class="fas fa-code"></i>
+                  </button>
+                </div>
+                <div class="image-badges ml-auto">
+                  <span
+                    class="badge border border-primary text-secondary mr-2"
+                    t-esc="getActiveImageSize()"
+                  ></span>
+                  <span
+                    class="badge border border-primary text-secondary"
+                    t-esc="getImageExtension(activeImage)"
+                  ></span>
+                </div>
+              </div>
+              <div
+                class="image-wrapper my-2"
+                t-ref="image-preview"
+                t-on-click="copyActiveImage"
+              >
+                <canvas
+                  t-if="isActiveImageEditable()"
+                  t-ref="preview-canvas"
+                ></canvas>
+                <ImageComponent
+                  t-else=""
+                  src="activeImage.src"
+                  alt="'Image preview'"
+                />
+              </div>
+              <div class="image-options input-group">
                 <button
                   class="btn btn-outline-primary mr-2"
-                  title="Copy image"
-                  t-on-click="copyImage(previewImageRef.el)"
+                  title="Toggle background"
+                  t-att-disabled="!isActiveImageEditable()"
+                  t-on-click="toggleBackground"
                 >
-                  <i class="fas fa-copy"></i>
+                  <i
+                    t-attf-class="fas fa-toggle-{{ imageData[activeImage.src] ? 'off' : 'on' }}"
+                  ></i>
+                  Background
                 </button>
-                <button
-                  class="btn btn-outline-primary mr-2"
-                  title="Copy URL"
-                  t-on-click="copyUrl(activeImage)"
-                >
-                  <i class="fas fa-code"></i>
-                </button>
-                <span
-                  class="input-group-text ml-auto mr-2"
-                  t-esc="getImageSize(activeImage)"
-                ></span>
-                <span
-                  class="input-group-text"
-                  t-esc="getImageExtension(activeImage)"
-                ></span>
               </div>
             </div>
             <div t-else="" class="default-message">
@@ -351,15 +425,15 @@ export default class App extends Component<{}, Environment> {
   //---------------------------------------------------------------------------
   static style = css`
     .app {
-      input.search-input {
-        width: 500px;
-      }
+      display: flex;
+      flex-direction: column;
+      height: 100%;
 
       .main {
-        position: relative;
-        height: 100%;
+        flex: 1;
         display: flex;
         justify-content: center;
+        position: relative;
 
         .notification {
           position: absolute;
@@ -369,26 +443,51 @@ export default class App extends Component<{}, Environment> {
       }
     }
 
+    .search-group {
+      flex: 1;
+
+      .extensions {
+        cursor: pointer;
+        max-width: 4rem;
+        appearance: none;
+      }
+    }
+
     .image-gallery {
       display: grid;
       grid-template-columns: repeat(${IMAGE_COLS}, ${100 / IMAGE_COLS}%);
       grid-template-rows: repeat(${IMAGE_ROWS}, ${100 / IMAGE_ROWS}%);
-      height: 83vh;
+    }
+
+    .image-badges {
+      display: flex;
+      flex-flow: row nowrap;
+      align-items: center;
     }
 
     .preview {
       height: 100%;
-      position: relative;
-
-      .image-wrapper {
-        max-height: 82vh;
-        overflow-y: auto;
-      }
+      display: flex;
+      flex-flow: column nowrap;
 
       .image-options {
-        position: absolute;
-        bottom: 0;
-        right: 0;
+        flex: 0;
+      }
+
+      .image-wrapper {
+        overflow-y: auto;
+
+        img {
+          height: initial;
+        }
+
+        canvas {
+          width: 100%;
+        }
+      }
+
+      .image-actions {
+        flex: 0;
       }
     }
 
@@ -399,27 +498,22 @@ export default class App extends Component<{}, Environment> {
       &:not(.empty) {
         cursor: pointer;
 
-        &:hover,
-        &:focus {
+        &.selected,
+        &:hover {
           border-color: ${HIGHTLIGHT_COLOR};
           border-radius: 3px;
         }
       }
-
-      img {
-        height: 100%;
-        width: 100%;
-        object-fit: cover;
-      }
     }
 
     .default-message {
-      height: 75vh;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
 
       .message {
+        text-align: center;
         font-size: 2rem;
         font-style: italic;
       }
@@ -437,12 +531,15 @@ export default class App extends Component<{}, Environment> {
   public state = useState(getDefaultState());
 
   private currentSearch: string = "";
+  private configManager = new StorageManager<any>("cfg");
   private favoritesManager = new StorageManager<string[]>("fav", {
     parse: (urls) => urls.split(",").map((u) => URL_PREFIX + u),
     serialize: (urls) => urls.map((u) => u.slice(URL_PREFIX.length)).join(","),
   });
-  private configManager = new StorageManager<any>("cfg");
+  private focusedImage: HTMLImageElement | null = null;
   private hasClipboardAccess = false;
+  private hoveredImage: HTMLImageElement | null = null;
+  private imageData: { [url: string]: ImageData | null } = {};
   private notifyTimeout: number = 0;
   private notificationManager = useAnimation<string>(
     "notification",
@@ -451,14 +548,15 @@ export default class App extends Component<{}, Environment> {
   private toFocus: number | null = null;
   private searchCache = new Cache((key) => this.fetchUrls(key));
   private searchInputRef = useRef("search-input");
-  private previewImageRef = useRef("preview-image");
+  private previewCanvasRef = useRef("preview-canvas");
+  private willUpdateCanvas: boolean = false;
 
   private cols: number = IMAGE_COLS;
   private rows: number = IMAGE_ROWS;
   private exts: Extension[] = ["all", "gif", "png"];
 
-  private get activeImage(): string | null {
-    return this.state.hoveredImage || this.state.focusedImage;
+  private get activeImage(): HTMLImageElement | null {
+    return this.hoveredImage || this.focusedImage;
   }
 
   private get pageCount(): number {
@@ -471,7 +569,21 @@ export default class App extends Component<{}, Environment> {
 
   constructor() {
     super(...arguments);
-    useExternalListener(window, "keydown", this.onWindowKeydown, true);
+    useCustomStyle("image-gallery", (el) => {
+      const { x, y } = el.getBoundingClientRect();
+      return `height: ${window.innerHeight - y - x}px;`;
+    });
+    useCustomStyle("image-preview", (el) => {
+      const { x, y, width } = el.getBoundingClientRect();
+      const prev = el.previousElementSibling!.getBoundingClientRect();
+      const next = el.nextElementSibling!.getBoundingClientRect();
+      const margin = y - (prev.y + prev.height);
+      const padding = window.innerWidth - x - width;
+      return `height: ${
+        window.innerHeight - y - next.height - margin - padding
+      }px;`;
+    });
+    useExternalListener(window, "keydown", this.onWindowKeydown);
   }
 
   public async willStart() {
@@ -498,6 +610,16 @@ export default class App extends Component<{}, Environment> {
   }
 
   public patched() {
+    const img = this.activeImage;
+    if (this.willUpdateCanvas && img && this.previewCanvasRef.el) {
+      this.willUpdateCanvas = false;
+      if (img.complete) {
+        this.drawPreview();
+      } else {
+        img.addEventListener("load", () => this.drawPreview(), { once: true });
+      }
+    }
+
     if (this.toFocus === null) return;
     this.focusImage(this.toFocus);
     this.toFocus = null;
@@ -521,20 +643,20 @@ export default class App extends Component<{}, Environment> {
     this.forceUpdate();
   }
 
-  private async copyImage(target: HTMLElement | Event): Promise<void> {
-    const img = this.getImage(target);
+  private closeSettings() {
+    if (!this.state.settingsOpen) return;
+    this.state.settingsOpen = false;
+    this.forceUpdate(true);
+  }
+
+  private async copyActiveImage(): Promise<void> {
+    const img = this.activeImage;
     if (!img || !this.hasClipboardAccess) return;
-    if (!img.complete) {
-      img.addEventListener("load", () => this.copyImage(img), { once: true });
-      return;
+    if (this.getImageExtension(img) === "GIF") {
+      return this.copyActiveImageUrl();
     }
-    if (this.getImageExtension(img.src) === "GIF") {
-      return this.copyUrl(img.src);
-    }
-    const canvas = document.createElement("canvas") as HTMLCanvasElement;
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.getContext("2d")!.drawImage(img, 0, 0);
+    if (!this.previewCanvasRef.el) return;
+    const canvas = this.previewCanvasRef.el as HTMLCanvasElement;
     const blob: Blob = await new Promise((resolve) =>
       canvas.toBlob((b) => resolve(b!), "image/png")
     );
@@ -543,10 +665,26 @@ export default class App extends Component<{}, Environment> {
     this.notify("Image copied!");
   }
 
-  private async copyUrl(url: string | null): Promise<void> {
-    if (!url || !this.hasClipboardAccess) return;
-    await navigator.clipboard.writeText(url);
+  private async copyActiveImageUrl(): Promise<void> {
+    const img = this.activeImage;
+    if (!img || !this.hasClipboardAccess) return;
+    await navigator.clipboard.writeText(img.src);
     this.notify("URL copied!");
+  }
+
+  private drawPreview(): void {
+    const img = this.activeImage;
+    if (!img) return;
+    const canvas = this.previewCanvasRef.el as HTMLCanvasElement;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d")!;
+    const imageData = this.imageData[img.src];
+    if (imageData) {
+      ctx.putImageData(imageData, 0, 0);
+    } else {
+      ctx.drawImage(img, 0, 0);
+    }
   }
 
   private async fetchUrls(query: string): Promise<string[]> {
@@ -598,9 +736,8 @@ export default class App extends Component<{}, Environment> {
     const target = images[index];
     if (!target) return;
     this.setFocusedImage(true, target);
-    if (this.state.focusedImage) {
+    if (this.focusedImage) {
       target.focus();
-      this.copyImage(target);
       return;
     } else {
       return;
@@ -611,8 +748,15 @@ export default class App extends Component<{}, Environment> {
     return this.searchInputRef.el?.focus();
   }
 
-  private forceUpdate(): void {
+  private forceUpdate(updatePreview = false): void {
+    if (updatePreview) this.willUpdateCanvas = true;
     this.state.updateId++;
+  }
+
+  private getActiveImageSize(): string {
+    const { src } = this.activeImage!;
+    const size = this.state.imageSizes[src];
+    return size ? `${size[0]}x${size[1]}` : "loading...";
   }
 
   private getCurrentPageUrls(): string[] {
@@ -654,13 +798,8 @@ export default class App extends Component<{}, Environment> {
     }
   }
 
-  private getImageExtension(url: string): string {
-    return (url.split(".").pop() || "???").toUpperCase();
-  }
-
-  private getImageSize(url: string): string {
-    const size = this.state.imageSizes[url];
-    return size ? `${size[0]}x${size[1]}` : "loading...";
+  private getImageExtension(img: HTMLImageElement): string {
+    return (img.src.split(".").pop() || "???").toUpperCase();
   }
 
   private getSuggestions(): string[] {
@@ -674,12 +813,25 @@ export default class App extends Component<{}, Environment> {
     }
   }
 
+  private isActiveImageEditable(): boolean {
+    const img = this.activeImage;
+    return Boolean(
+      img && img.complete && this.getImageExtension(img) !== "GIF"
+    );
+  }
+
   private notify(message: string): void {
     this.notificationManager.value = message;
     window.clearTimeout(this.notifyTimeout);
     this.notifyTimeout = window.setTimeout(() => {
       this.notificationManager.value = null;
     }, NOTIFICATION_DELAY);
+  }
+
+  private onBackgroundToleranceChanged(ev: Event): void {
+    const target = ev.target as HTMLInputElement;
+    this.imageData = {};
+    this.configManager.set("bgTolerance", Number(target.value));
   }
 
   private onDownloadPathChanged(ev: Event): void {
@@ -727,7 +879,7 @@ export default class App extends Component<{}, Environment> {
         return;
       }
       case "c": {
-        if (ev.ctrlKey) this.copyImage(target);
+        if (ev.ctrlKey) this.copyActiveImage();
         return;
       }
     }
@@ -785,9 +937,19 @@ export default class App extends Component<{}, Environment> {
         return;
       }
       case "Escape": {
-        this.state.settingsOpen = false;
+        this.closeSettings();
         this.state.showSuggestions = false;
         this.focusSearchBar();
+        return;
+      }
+      case "Enter": {
+        const focused = document.activeElement;
+        if (
+          focused === document.body || // No focus
+          focused?.classList.contains("image-wrapper") // Focus on image
+        ) {
+          this.copyActiveImage();
+        }
         return;
       }
       case "f": {
@@ -803,6 +965,10 @@ export default class App extends Component<{}, Environment> {
         return;
       }
     }
+  }
+
+  private openSettings() {
+    this.state.settingsOpen = true;
   }
 
   private pageNext(): void {
@@ -829,6 +995,69 @@ export default class App extends Component<{}, Environment> {
     return range(n);
   }
 
+  private toggleBackground(): void {
+    if (!this.previewCanvasRef.el || !this.activeImage) return;
+    // Existing image data (canvas override) => delete it and redraw.
+    if (this.imageData[this.activeImage.src]) {
+      delete this.imageData[this.activeImage.src];
+      this.forceUpdate(true);
+      return;
+    }
+
+    const canvas = this.previewCanvasRef.el as HTMLCanvasElement;
+    const { width, height } = canvas;
+    const ctx = canvas.getContext("2d")!;
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const pixels = imgData.data;
+
+    // Retrieves the current background tolerance.
+    const t = this.configManager.get("bgTolerance", 3);
+    const similar = (a: number, b: number) => a >= b - t && a <= b + t;
+
+    // Target color is the color of the first corner having the same color as another.
+    const corners = [
+      0, // Top left
+      width * 4, // Top right
+      width * height * 4 - width * 4, // Bottom left
+      width * height * 4, // Bottom right
+    ];
+    const target: number[] = []; // Target color
+    for (const ca of corners) {
+      // Alpha is 0 => image already has no background.
+      if (pixels[ca + 3] === 0) return;
+      if (target.length) break;
+      for (const cb of corners) {
+        if (ca === cb) continue;
+        const a = pixels.slice(cb, cb + 3);
+        const b = pixels.slice(ca, ca + 3);
+        if (a.every((x, i) => x === b[i])) {
+          target.push(...a);
+          break;
+        }
+      }
+    }
+    // If no target is found: target color is the first pixel (top left).
+    const [tr, tg, tb] = target.length ? target : pixels;
+
+    log(`Replacing color: rgb(${tr}, ${tg}, ${tb})`);
+
+    // Replaces all pixels close to the target color with transparent pixels.
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (
+        similar(pixels[i], tr) &&
+        similar(pixels[i + 1], tg) &&
+        similar(pixels[i + 2], tb)
+      ) {
+        pixels[i] = pixels[i + 1] = pixels[i + 2] = pixels[i + 3] = 0;
+      }
+    }
+
+    // Applies and saves new image data.
+    this.imageData[this.activeImage.src] = imgData;
+    ctx.putImageData(imgData, 0, 0);
+    this.forceUpdate();
+  }
+
   private removeFavorite({ detail }: OwlEvent<DropdownItem>): void {
     this.favoritesManager.remove(detail.id);
     this.forceUpdate();
@@ -840,6 +1069,8 @@ export default class App extends Component<{}, Environment> {
       delete newState[key as keyof typeof newState];
     }
     Object.assign(this.state, newState);
+    this.currentSearch = "";
+    this.imageData = {};
   }
 
   private async search(): Promise<void> {
@@ -870,11 +1101,13 @@ export default class App extends Component<{}, Environment> {
   }
 
   private setFocusedImage(set: boolean, target: HTMLElement | Event): void {
-    this.state.focusedImage = set ? this.getImage(target)?.src! : null;
+    this.focusedImage = set ? this.getImage(target) : null;
+    this.forceUpdate(true);
   }
 
   private setHoveredImage(set: boolean, target: HTMLElement | Event): void {
-    this.state.hoveredImage = set ? this.getImage(target)?.src! : null;
+    this.hoveredImage = set ? this.getImage(target) : null;
+    this.forceUpdate(true);
   }
 
   private toggleFavorite() {

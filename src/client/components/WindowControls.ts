@@ -15,15 +15,29 @@ export default class WindowControls extends Component<any, Environment> {
         <li>
           <button
             class="btn btn-sm text-secondary"
-            t-on-click="env.api.send('window-minimize')"
+            tabindex="-1"
+            t-on-mousedown.prevent=""
+            t-on-click.prevent="env.api.send('window-minimize')"
           >
             <i class="fas fa-minus"></i>
           </button>
         </li>
         <li>
           <button
+            class="btn btn-sm text-secondary"
+            tabindex="-1"
+            t-on-mousedown.prevent=""
+            t-on-click.prevent="env.api.send('window-maximize')"
+          >
+            <i class="far fa-square"></i>
+          </button>
+        </li>
+        <li>
+          <button
             class="btn btn-sm text-danger"
-            t-on-click="env.api.send('window-close')"
+            tabindex="-1"
+            t-on-mousedown.prevent=""
+            t-on-click.prevent="env.api.send('window-close')"
           >
             <i class="fas fa-times"></i>
           </button>
@@ -40,12 +54,17 @@ export default class WindowControls extends Component<any, Environment> {
       align-items: center;
       justify-content: space-between;
       background-color: rgba(0, 0, 0, 0.3);
+      user-select: none;
       -webkit-app-region: drag;
 
       .buttons {
         display: flex;
         margin: 0;
         -webkit-app-region: no-drag;
+
+        .btn:focus {
+          box-shadow: none;
+        }
       }
     }
   `;

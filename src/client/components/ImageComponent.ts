@@ -35,12 +35,13 @@ export default class ImageComponent extends Component<ImageProps, Environment> {
     .img-component {
       width: 100%;
       height: 100%;
+      object-fit: cover;
 
       &.not-loaded {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 5rem;
+        font-size: 8vh;
         color: #484858;
       }
     }

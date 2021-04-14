@@ -29,8 +29,14 @@ export class StorageManager<T> {
     }
   }
 
-  public get(key: string): T | null {
-    return this.has(key) ? this.entries[key] : null;
+  public get(key: string, defaultValue: T | null = null): T | null {
+    if (this.has(key)) {
+      return this.entries[key];
+    } else if (defaultValue !== null) {
+      return this.set(key, defaultValue);
+    } else {
+      return null;
+    }
   }
 
   public has(key: string): boolean {

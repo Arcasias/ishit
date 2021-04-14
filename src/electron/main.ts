@@ -16,10 +16,16 @@ function onReady(): void {
   });
   ipcMain.on("window-close", () => window.close());
   ipcMain.on("window-minimize", () => window.minimize());
+  ipcMain.on("window-maximize", () =>
+    window.isMaximized() ? window.unmaximize() : window.maximize()
+  );
   const window = new BrowserWindow({
-    width: 1500,
-    height: 1000,
+    width: 800,
+    height: 600,
+    minWidth: 800,
+    minHeight: 600,
     frame: false,
+    useContentSize: true,
     icon: join(__dirname, "../../icon.ico"),
     webPreferences: {
       contextIsolation: true,

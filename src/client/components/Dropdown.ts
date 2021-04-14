@@ -21,7 +21,7 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
   // TEMPLATE
   //---------------------------------------------------------------------------
   static template = html`
-    <div class="props.items dropdown">
+    <div class="dropdown">
       <button
         type="button"
         class="btn btn-outline-primary"
