@@ -1,5 +1,5 @@
 import { Component, tags } from "@odoo/owl";
-import { version } from "../../package.min.json";
+import { name, version } from "../../package.min.json";
 import { Environment } from "../classes/Environment";
 
 const { xml: html, css } = tags;
@@ -10,7 +10,7 @@ export default class WindowControls extends Component<any, Environment> {
   //---------------------------------------------------------------------------
   static template = html`
     <nav class="window-controls nav">
-      <div class="text-muted ms-2">v${version}</div>
+      <div class="text-black-50 ms-2">${name} v${version}</div>
       <ul class="buttons">
         <li>
           <button

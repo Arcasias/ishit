@@ -19,6 +19,65 @@ export async function ajax(
   });
 }
 
+export function fullFillPixels(
+  pixels: Uint8ClampedArray,
+  start: number,
+  [tr, tg, tb]: [number, number, number],
+  threshold: number
+): void {
+  const t = threshold / 2;
+  const [trl, trg] = [tr - t, tr + t];
+  const [tbl, tbg] = [tb - t, tb + t];
+  const [tgl, tgg] = [tg - t, tg + t];
+  for (let n = start; n < pixels.length; n += 4) {
+    if (
+      pixels[n + 3] &&
+      pixels[n] > trl &&
+      pixels[n] <= trg &&
+      pixels[n + 1] > tgl &&
+      pixels[n + 1] <= tgg &&
+      pixels[n + 2] > tbl &&
+      pixels[n + 2] <= tbg
+    ) {
+      pixels[n + 3] = 0; // Set transparency to 0
+    }
+  }
+}
+
+export function floodFillPixels(
+  pixels: Uint8ClampedArray,
+  start: number,
+  width: number,
+  [tr, tg, tb]: [number, number, number],
+  threshold: number
+): void {
+  const q: number[] = [start];
+  const t = threshold / 2;
+  const [trl, trg] = [tr - t, tr + t];
+  const [tbl, tbg] = [tb - t, tb + t];
+  const [tgl, tgg] = [tg - t, tg + t];
+  while (q.length) {
+    const n: number = q.shift()!;
+    if (
+      pixels[n + 3] &&
+      pixels[n] > trl &&
+      pixels[n] <= trg &&
+      pixels[n + 1] > tgl &&
+      pixels[n + 1] <= tgg &&
+      pixels[n + 2] > tbl &&
+      pixels[n + 2] <= tbg
+    ) {
+      pixels[n + 3] = 0; // Set transparency to 0
+      q.push(
+        n + 4, // right
+        n - 4, // left
+        n + width * 4, // down
+        n - width * 4 // up
+      );
+    }
+  }
+}
+
 export function getGoogleImageUrl(query: string): string {
   const formatted = query.replace(/\s+/g, "+");
   return `https://www.google.com/search?q=${formatted}&tbm=isch`;

@@ -1,6 +1,13 @@
 import { Component, hooks, tags } from "@odoo/owl";
 import { OwlEvent } from "@odoo/owl/dist/types/core/owl_event";
-import { ajax, getGoogleImageUrl, log, range } from "../../common/utils";
+import {
+  ajax,
+  floodFillPixels,
+  fullFillPixels,
+  getGoogleImageUrl,
+  log,
+  range,
+} from "../../common/utils";
 import { name } from "../../package.min.json";
 import Cache from "../classes/Cache";
 import { Environment } from "../classes/Environment";
@@ -19,7 +26,9 @@ interface ImageMetadata {
 interface ConfigItem {
   key: string;
   text: string;
-  type: "text" | "number";
+  type: "text" | "number" | "checkbox" | "range";
+  min?: number;
+  max?: number;
   defaultValue?: any;
   apiEventKey?: string;
   format: (value: string) => any;
@@ -39,8 +48,8 @@ const HIGHTLIGHT_COLOR = "#ff0080";
 const URL_PREFIX = "https://";
 const NOTIFICATION_DELAY = 2500;
 
-const configItems: ConfigItem[] = [
-  {
+const configItems: { [key: string]: ConfigItem } = {
+  downloadPath: {
     key: "downloadPath",
     text: "Download path",
     type: "text",
@@ -48,14 +57,23 @@ const configItems: ConfigItem[] = [
     apiEventKey: "set-download-path",
     format: (val: string) => val.replace(/['"]+/g, "").trim(),
   },
-  {
-    key: "bgTolerance",
+  tolerance: {
+    key: "tolerance",
     text: "Background removal tolerance",
-    type: "number",
+    type: "range",
     defaultValue: 20,
+    min: 1,
+    max: 255,
     format: (val: string) => Number(val),
   },
-];
+  contiguous: {
+    key: "contiguous",
+    text: "Remove contiguous pixels",
+    type: "checkbox",
+    defaultValue: true,
+    format: (val: string) => Boolean(val),
+  },
+};
 
 function cleanQuery(query: string): string {
   return query
@@ -181,22 +199,44 @@ export default class App extends Component<{}, Environment> {
               </header>
               <main class="modal-body">
                 <div
-                  t-foreach="configItems"
+                  t-foreach="filteredConfigItems"
                   t-as="item"
                   t-key="item.key"
-                  class="input-group"
-                  t-att-class="{ 'mb-3': !item_last }"
+                  t-att-class="{ 'mb-3': !item_last, 'form-check': item.type === 'checkbox' }"
+                  t-on-change="configSet(item.key, true)"
                 >
-                  <div class="input-group-text" t-esc="item.text"></div>
+                  <label
+                    t-attf-class="form{{ item.type === 'checkbox' ? '-check' : '' }}-label"
+                    t-esc="item.text"
+                  ></label>
                   <input
+                    t-if="item.type === 'checkbox'"
+                    t-att-id="item.key"
+                    type="checkbox"
+                    class="form-check-input"
+                    t-att-checked="configGet(item.key)"
+                  />
+                  <input
+                    t-elif="item.type === 'range'"
+                    type="range"
+                    class="form-range h-100"
+                    t-att-min="item.min"
+                    t-att-max="item.max"
+                    step="1"
+                    t-att-value="configGet(item.key)"
+                  />
+                  <input
+                    t-else=""
                     t-att-type="item.type"
                     class="form-control"
-                    t-att-value="configManager.get(item.key, item.defaultValue)"
-                    t-on-change="onConfigValueChanged(item)"
+                    t-att-value="configGet(item.key)"
                   />
                 </div>
               </main>
               <footer class="modal-footer">
+                <span class="form-text text-muted fst-italic me-auto">
+                  Changes are saved automatically
+                </span>
                 <button
                   type="button"
                   class="btn btn-primary"
@@ -362,7 +402,7 @@ export default class App extends Component<{}, Environment> {
           </section>
           <section class="col">
             <div class="preview me-0" t-if="activeImage">
-              <div class="image-actions btn-toolbar">
+              <div class="btn-toolbar">
                 <a
                   class="btn btn-outline-primary me-2"
                   title="Download"
@@ -413,18 +453,41 @@ export default class App extends Component<{}, Environment> {
                   preload="false"
                 />
               </div>
-              <div class="image-options input-group">
+              <div t-if="isActiveImageEditable()" class="input-group">
                 <button
-                  class="btn btn-outline-primary me-2"
-                  title="Toggle background"
-                  t-att-disabled="!isActiveImageEditable()"
+                  class="btn btn-outline-primary"
                   t-on-click="toggleBackground"
                 >
+                  Background
                   <i
                     t-attf-class="fas fa-toggle-{{ imageData[activeImage.src] ? 'off' : 'on' }}"
                   ></i>
-                  Background
                 </button>
+                <div class="form-control">
+                  <input
+                    type="range"
+                    class="form-range h-100"
+                    title="Tolerance"
+                    min="${configItems.tolerance.min}"
+                    max="${configItems.tolerance.max}"
+                    step="1"
+                    t-att-value="configGet('tolerance')"
+                    t-on-change="configSet('tolerance', activeImage)"
+                  />
+                </div>
+                <label for="contiguous" class="input-group-text">
+                  <input
+                    id="contiguous"
+                    type="checkbox"
+                    class="form-check-input"
+                    title="Remove contiguous pixels"
+                    t-att-checked="configGet('contiguous')"
+                    t-on-change="configSet('contiguous', activeImage)"
+                  />
+                </label>
+              </div>
+              <div t-else="" class="input-group">
+                <span class="input-group-text w-100">No actions available</span>
               </div>
             </div>
             <div t-else="" class="default-message">
@@ -496,10 +559,6 @@ export default class App extends Component<{}, Environment> {
       display: flex;
       flex-flow: column nowrap;
 
-      .image-options {
-        flex: 0;
-      }
-
       .image-wrapper {
         overflow-y: auto;
 
@@ -510,10 +569,6 @@ export default class App extends Component<{}, Environment> {
         canvas {
           width: 100%;
         }
-      }
-
-      .image-actions {
-        flex: 0;
       }
     }
 
@@ -576,7 +631,7 @@ export default class App extends Component<{}, Environment> {
   private toFocus: number | null = null;
   private searchCache = new Cache((key) => this.fetchUrls(key));
   private searchInputRef = useRef("search-input");
-  private configItems = configItems.filter(
+  private filteredConfigItems = Object.values(configItems).filter(
     (item) => this.env.isDesktop || !item.apiEventKey
   );
   private previewCanvasRef = useRef("preview-canvas");
@@ -627,11 +682,13 @@ export default class App extends Component<{}, Environment> {
     this.searchCache.load(favorites);
     // Load config
     this.configManager.load();
-    for (const item of this.configItems) {
-      if (item.apiEventKey) {
-        const value = this.configManager.get(item.key, item.defaultValue);
-        if (value !== null) {
-          this.env.api.send(item.apiEventKey, value);
+    if (this.env.isDesktop) {
+      for (const item of Object.values(configItems)) {
+        if (item.apiEventKey) {
+          const value = this.configGet(item.key);
+          if (value !== null) {
+            this.env.api.send(item.apiEventKey, value);
+          }
         }
       }
     }
@@ -688,6 +745,37 @@ export default class App extends Component<{}, Environment> {
     if (!this.modalManager.value) return;
     this.modalManager.value = null;
     this.forceUpdate(true);
+  }
+
+  private configGet(configKey: string): any {
+    const { format, key, defaultValue } = configItems[configKey];
+    return format(this.configManager.get(key, defaultValue));
+  }
+
+  private configSet(
+    itemKey: string,
+    resetImage: HTMLElement | true,
+    ev: Event
+  ): void {
+    const item = configItems[itemKey]!;
+    const input = ev.target as any;
+    const prop = item.type === "checkbox" ? "checked" : "value";
+    input[prop] = item.format(input[prop]);
+    this.configManager.set(item.key, input[prop]);
+    if (item.apiEventKey) {
+      this.env.api.send(item.apiEventKey, input[prop]);
+    } else {
+      const hasImageData = Boolean(
+        this.activeImage && this.imageData[this.activeImage.src]
+      );
+      this.imageData = {};
+      if (resetImage === this.activeImage) {
+        if (hasImageData) {
+          this.drawPreview(); // Instantly repaint canvas to apply new config
+          this.toggleBackground();
+        }
+      }
+    }
   }
 
   private async copyActiveImage(): Promise<void> {
@@ -858,15 +946,6 @@ export default class App extends Component<{}, Environment> {
     this.notifyTimeout = window.setTimeout(() => {
       this.notificationManager.value = null;
     }, NOTIFICATION_DELAY);
-  }
-
-  private onConfigValueChanged(item: ConfigItem, ev: Event): void {
-    const input = ev.target as HTMLInputElement;
-    input.value = item.format(input.value);
-    this.configManager.set(item.key, input.value);
-    if (item.apiEventKey) {
-      this.env.api.send(item.apiEventKey, input.value);
-    }
   }
 
   private onImageKeydown(index: number, ev: KeyboardEvent): void {
@@ -1046,10 +1125,6 @@ export default class App extends Component<{}, Environment> {
     const imgData = ctx.getImageData(0, 0, width, height);
     const pixels = imgData.data;
 
-    // Retrieves the current background tolerance.
-    const t = this.configManager.get("bgTolerance", 3);
-    const similar = (a: number, b: number) => a >= b - t && a <= b + t;
-
     // Target color is the color of the first corner having the same color as another.
     const corners = [
       0, // Top left
@@ -1059,8 +1134,11 @@ export default class App extends Component<{}, Environment> {
     ];
     const target: number[] = []; // Target color
     for (const ca of corners) {
-      // Alpha is 0 => image already has no background.
-      if (pixels[ca + 3] === 0) return;
+      if (pixels[ca + 3] === 0) {
+        // Alpha is 0 => image already has no background.
+        this.notify("Background is already transparent!");
+        return;
+      }
       if (target.length) break;
       for (const cb of corners) {
         if (ca === cb) continue;
@@ -1074,17 +1152,20 @@ export default class App extends Component<{}, Environment> {
     }
     // If no target is found: target color is the first pixel (top left).
     const [tr, tg, tb] = target.length ? target : pixels;
-
-    log(`Replacing color: rgb(${tr}, ${tg}, ${tb})`);
+    const contiguous = this.configGet("contiguous");
+    const tolerance = this.configGet("tolerance");
+    log(
+      `Replacing color: rgb(${tr}, ${tg}, ${tb}) / tolerance: ${tolerance} / apply to contiguous: ${contiguous}`
+    );
 
     // Replaces all pixels close to the target color with transparent pixels.
-    for (let i = 0; i < pixels.length; i += 4) {
-      if (
-        similar(pixels[i], tr) &&
-        similar(pixels[i + 1], tg) &&
-        similar(pixels[i + 2], tb)
-      ) {
-        pixels[i] = pixels[i + 1] = pixels[i + 2] = pixels[i + 3] = 0;
+    if (contiguous) {
+      for (const corner of corners) {
+        floodFillPixels(pixels, corner, width, [tr, tg, tb], tolerance);
+      }
+    } else {
+      for (const corner of corners) {
+        fullFillPixels(pixels, corner, [tr, tg, tb], tolerance);
       }
     }
 
