@@ -1,6 +1,6 @@
 import { Component, hooks, tags } from "@odoo/owl";
 import { OwlEvent } from "@odoo/owl/dist/types/core/owl_event";
-import { getGoogleImageUrl, log, range } from "../../common/utils";
+import { ajax, getGoogleImageUrl, log, range } from "../../common/utils";
 import { name } from "../../package.min.json";
 import Cache from "../classes/Cache";
 import { Environment } from "../classes/Environment";
@@ -11,16 +11,51 @@ import WindowControls from "./WindowControls";
 
 type Extension = "all" | "gif" | "png";
 
+interface ImageMetadata {
+  size: [number, number];
+  mimetype: string | null;
+}
+
+interface ConfigItem {
+  key: string;
+  text: string;
+  type: "text" | "number";
+  defaultValue?: any;
+  apiEventKey?: string;
+  format: (value: string) => any;
+}
+
 const { xml: html, css } = tags;
 const { useExternalListener, useRef, useState } = hooks;
 
+const EXTENSIONS: Extension[] = ["all", "gif", "png"];
+const EDITABLE_EXTENSIONS = ["png", "jpg", "jpeg"];
 const IMAGE_COLS = 5;
 const IMAGE_ROWS = 5;
 const IMAGE_URL_RE = /"https:\/\/[\w\/\.-]+\.(png|jpg|jpeg|gif)"/gi;
+const IMAGE_MTYPE_RE = /(image|text)\/(\w+);?/i;
 const QUERY_EXTENSION_RE = /\b(gif|png)\b/gi;
 const HIGHTLIGHT_COLOR = "#ff0080";
 const URL_PREFIX = "https://";
 const NOTIFICATION_DELAY = 2500;
+
+const configItems: ConfigItem[] = [
+  {
+    key: "downloadPath",
+    text: "Download path",
+    type: "text",
+    defaultValue: null,
+    apiEventKey: "set-download-path",
+    format: (val: string) => val.replace(/['"]+/g, "").trim(),
+  },
+  {
+    key: "bgTolerance",
+    text: "Background removal tolerance",
+    type: "number",
+    defaultValue: 20,
+    format: (val: string) => Number(val),
+  },
+];
 
 function cleanQuery(query: string): string {
   return query
@@ -35,11 +70,10 @@ function getDefaultState() {
   return {
     activeSuggestion: <number | null>null,
     ext: <Extension>"all",
-    imageSizes: <{ [url: string]: number[] | null }>{},
+    imageMetadata: <{ [url: string]: ImageMetadata | null }>{},
     pageIndex: <number>0,
     query: <string>"",
     searching: <boolean>false,
-    settingsOpen: <boolean>false,
     showSuggestions: <boolean>false,
     updateId: <number>0,
     urls: <string[]>[],
@@ -116,7 +150,7 @@ function useCustomStyle(
     style = null;
     isStyleApplied = false;
     window.clearTimeout(resizeTimeout);
-    resizeTimeout = window.setTimeout(applyStyle, 100);
+    resizeTimeout = window.setTimeout(applyStyle, 250);
   });
 }
 
@@ -129,40 +163,36 @@ export default class App extends Component<{}, Environment> {
   static template = html`
     <div class="app">
       <t t-set="favorites" t-value="getFavorites()" />
-      <t t-if="state.settingsOpen">
-        <div class="modal-backdrop show"></div>
+      <t t-set="suggestions" t-value="getSuggestions()" />
+      <t t-if="modalManager.value">
+        <div class="modal-backdrop"></div>
         <div class="modal" tabindex="-1" role="dialog">
-          <div class="modal-dialog" role="document">
+          <div class="modal-dialog slide-top" role="document" t-ref="settings">
             <div class="modal-content">
               <header class="modal-header">
                 <h5 class="modal-title">Settings</h5>
-                <button type="button" class="close" t-on-click="closeSettings">
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  t-on-click="closeSettings"
+                >
                   <i class="fas fa-times"></i>
                 </button>
               </header>
               <main class="modal-body">
-                <div t-if="env.isDesktop" class="input-group">
-                  <div class="input-group-prepend">
-                    <div class="input-group-text">Download path</div>
-                  </div>
+                <div
+                  t-foreach="configItems"
+                  t-as="item"
+                  t-key="item.key"
+                  class="input-group"
+                  t-att-class="{ 'mb-3': !item_last }"
+                >
+                  <div class="input-group-text" t-esc="item.text"></div>
                   <input
-                    type="text"
+                    t-att-type="item.type"
                     class="form-control"
-                    t-att-value="configManager.get('downloadPath')"
-                    t-on-change="onDownloadPathChanged"
-                  />
-                </div>
-                <div class="input-group">
-                  <div class="input-group-prepend">
-                    <div class="input-group-text">
-                      Background removal tolerance
-                    </div>
-                  </div>
-                  <input
-                    type="number"
-                    class="form-control"
-                    t-att-value="configManager.get('bgTolerance', 3)"
-                    t-on-change="onBackgroundToleranceChanged"
+                    t-att-value="configManager.get(item.key, item.defaultValue)"
+                    t-on-change="onConfigValueChanged(item)"
                   />
                 </div>
               </main>
@@ -180,97 +210,106 @@ export default class App extends Component<{}, Environment> {
         </div>
       </t>
       <WindowControls t-if="env.isDesktop" />
+      <div
+        t-if="notificationManager.value"
+        class="notification slide-right alert alert-success"
+        role="alert"
+        t-ref="notification"
+        t-esc="notificationManager.value"
+      ></div>
       <header class="header">
         <nav class="navbar">
-          <h1 class="navbar-brand m-0">
-            <span class="text-primary">i</span>mage
-            <span class="text-primary">S</span>earch from
-            <span class="text-primary">H</span>uman
-            <span class="text-primary">I</span>nput
-            <span class="text-primary">T</span>ext
-          </h1>
-          <button
-            type="button"
-            class="btn btn-outline-primary"
-            t-on-click="openSettings"
-          >
-            <i class="fas fa-cog"></i>
-          </button>
+          <div class="container-fluid">
+            <h5 class="navbar-brand m-0">
+              <span class="text-primary">i</span>mage
+              <span class="text-primary">S</span>earch from
+              <span class="text-primary">H</span>uman
+              <span class="text-primary">I</span>nput
+              <span class="text-primary">T</span>ext
+            </h5>
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              t-on-click="openSettings"
+            >
+              <i class="fas fa-cog"></i>
+            </button>
+          </div>
         </nav>
-        <form class="form-inline navbar" t-on-submit.prevent="search">
-          <div class="btn-group mr-2">
+        <nav class="navbar">
+          <div class="container-fluid flex-nowrap">
             <Dropdown
               t-if="favorites.length"
+              class="me-2"
               title="'Favorites'"
               items="favorites"
+              deletable="true"
               t-on-select.stop="applyFavorite"
               t-on-clear.stop="clearFavorites"
               t-on-remove.stop="removeFavorite"
             />
-            <button
-              t-if="currentSearch"
-              class="btn btn-outline-primary"
-              type="button"
-              t-on-click="toggleFavorite"
-            >
-              <i
-                t-attf-class="{{ favoritesManager.has(currentSearch) ? 'fas' : 'far' }} fa-star text-warning"
-              ></i>
-            </button>
-          </div>
-          <div class="search-group input-group">
-            <select
-              class="extensions form-control text-primary"
-              t-model="state.ext"
-            >
-              <option
-                t-foreach="exts"
-                t-as="ext"
-                t-key="ext"
-                t-att-value="ext"
-                t-esc="ext.toUpperCase()"
-              ></option>
-            </select>
-            <input
-              class="form-control search-input"
-              type="text"
-              placeholder="Search on Google Image"
-              aria-label="Search"
-              t-ref="search-input"
-              t-model="state.query"
-              t-on-focus="state.showSuggestions = true"
-              t-on-blur="state.showSuggestions = false"
-              t-on-keydown="onSearchKeydown"
-            />
-            <t t-set="suggestions" t-value="getSuggestions()" />
-            <div
-              t-if="state.showSuggestions and suggestions.length"
-              class="dropdown-menu"
-            >
-              <a
-                t-foreach="suggestions"
-                t-as="query"
-                t-key="query_index"
-                t-att-class="{ active: state.activeSuggestion === query_index }"
-                class="dropdown-item"
-                href="#"
-                t-esc="query"
-              ></a>
-            </div>
-            <div class="input-group-append">
-              <button class="btn btn-primary" type="submit">Search</button>
-              <button class="btn text-primary" type="button" t-on-click="reset">
+            <div class="input-group">
+              <div class="input-wrapper form-control bg-white">
+                <input
+                  type="text"
+                  class="me-2"
+                  placeholder="Search on Google Image"
+                  aria-label="Search"
+                  t-ref="search-input"
+                  t-model="state.query"
+                  t-on-focus="state.showSuggestions = true"
+                  t-on-blur="state.showSuggestions = false"
+                  t-on-keydown="onSearchKeydown"
+                />
+                <div
+                  t-if="state.showSuggestions and suggestions.length"
+                  class="dropdown-menu"
+                >
+                  <a
+                    t-foreach="suggestions"
+                    t-as="query"
+                    t-key="query_index"
+                    t-att-class="{ active: state.activeSuggestion === query_index }"
+                    class="dropdown-item"
+                    href="#"
+                    t-esc="query"
+                  ></a>
+                </div>
+                <button
+                  t-if="currentSearch"
+                  class="btn badge text-warning me-2 p-0"
+                  type="button"
+                  t-on-click="toggleFavorite"
+                >
+                  <i
+                    t-attf-class="{{ favoritesManager.has(currentSearch) ? 'fas' : 'far' }} fa-star text-warning"
+                  ></i>
+                </button>
+                <Dropdown
+                  title="state.ext.toUpperCase()"
+                  small="true"
+                  items="extensionItems"
+                  t-on-select.stop="applySearchExtension"
+                />
+              </div>
+              <button
+                t-attf-class="btn btn{{ getFullQuery() === currentSearch ? '-outline' : '' }}-primary"
+                t-on-click="search"
+              >
+                Search
+              </button>
+              <button class="btn text-primary" t-on-click="reset">
                 <i class="fas fa-times"></i>
               </button>
             </div>
           </div>
-        </form>
+        </nav>
       </header>
       <main class="main container-fluid">
         <t t-if="state.urls.length">
-          <section class="col p-0 mr-2">
+          <section class="col me-2">
             <nav class="pager nav mb-2">
-              <ul class="pagination m-0 mr-auto">
+              <ul class="pagination m-0 me-auto">
                 <li class="page-item" t-on-click.prevent="pagePrev()">
                   <button
                     class="page-link"
@@ -285,7 +324,7 @@ export default class App extends Component<{}, Environment> {
                   t-key="page"
                   class="page-item"
                   t-att-class="{ active: state.pageIndex === page }"
-                  t-on-click.prevent="pageSet(page, null)"
+                  t-on-click.prevent="pageSet(page)"
                 >
                   <button class="page-link" t-esc="page + 1"></button>
                 </li>
@@ -299,11 +338,11 @@ export default class App extends Component<{}, Environment> {
                 </li>
               </ul>
               <span
-                class="input-group-text ml-auto"
-                t-esc="state.urls.length + ' results'"
+                class="input-group-text ms-auto"
+                t-esc="getPagerValue()"
               ></span>
             </nav>
-            <ul class="image-gallery m-0" t-ref="image-gallery">
+            <ul class="image-gallery" t-ref="image-gallery">
               <li
                 t-foreach="getCurrentPageUrls()"
                 t-as="url"
@@ -317,15 +356,15 @@ export default class App extends Component<{}, Environment> {
                 t-on-click="copyActiveImage"
                 t-on-keydown="onImageKeydown(url_index)"
               >
-                <ImageComponent src="url" t-on-load.stop="onImageLoad" />
+                <ImageComponent src="url" t-on-ready.stop="onImageReady" />
               </li>
             </ul>
           </section>
-          <section class="col p-0">
-            <div class="preview mr-0" t-if="activeImage">
+          <section class="col">
+            <div class="preview me-0" t-if="activeImage">
               <div class="image-actions btn-toolbar">
                 <a
-                  class="btn btn-outline-primary mr-2"
+                  class="btn btn-outline-primary me-2"
                   title="Download"
                   download="download"
                   t-att-href="activeImage.src"
@@ -347,14 +386,14 @@ export default class App extends Component<{}, Environment> {
                     <i class="fas fa-code"></i>
                   </button>
                 </div>
-                <div class="image-badges ml-auto">
+                <div class="image-badges ms-auto">
                   <span
-                    class="badge border border-primary text-secondary mr-2"
+                    class="badge border border-primary text-secondary me-2"
                     t-esc="getActiveImageSize()"
                   ></span>
                   <span
                     class="badge border border-primary text-secondary"
-                    t-esc="getImageExtension(activeImage)"
+                    t-esc="getActiveImageExtension().toUpperCase()"
                   ></span>
                 </div>
               </div>
@@ -371,11 +410,12 @@ export default class App extends Component<{}, Environment> {
                   t-else=""
                   src="activeImage.src"
                   alt="'Image preview'"
+                  preload="false"
                 />
               </div>
               <div class="image-options input-group">
                 <button
-                  class="btn btn-outline-primary mr-2"
+                  class="btn btn-outline-primary me-2"
                   title="Toggle background"
                   t-att-disabled="!isActiveImageEditable()"
                   t-on-click="toggleBackground"
@@ -388,9 +428,7 @@ export default class App extends Component<{}, Environment> {
               </div>
             </div>
             <div t-else="" class="default-message">
-              <span class="message text-muted"
-                >Select an image to have more info</span
-              >
+              <span class="message text-muted">Source unavailable</span>
             </div>
           </section>
         </t>
@@ -398,24 +436,8 @@ export default class App extends Component<{}, Environment> {
           <span class="message text-muted">Searching ...</span>
         </div>
         <div t-else="" class="default-message">
-          <span class="message text-muted mr-3">No images to display</span>
-          <Dropdown
-            t-if="favorites.length"
-            title="'Browse your favorites'"
-            items="favorites"
-            large="true"
-            t-on-select.stop="applyFavorite"
-            t-on-clear.stop="clearFavorites"
-            t-on-remove.stop="removeFavorite"
-          />
+          <span class="message text-muted me-3">No images to display</span>
         </div>
-        <div
-          t-if="notificationManager.value"
-          class="notification slide-right alert alert-success"
-          role="alert"
-          t-ref="notification"
-          t-esc="notificationManager.value"
-        ></div>
       </main>
     </div>
   `;
@@ -434,22 +456,26 @@ export default class App extends Component<{}, Environment> {
         display: flex;
         justify-content: center;
         position: relative;
+      }
 
-        .notification {
-          position: absolute;
-          top: 1rem;
-          opacity: 0.9;
-        }
+      .notification {
+        position: absolute;
+        top: 3rem;
+        opacity: 0.9;
+        z-index: 9999;
       }
     }
 
-    .search-group {
-      flex: 1;
+    .input-wrapper {
+      display: flex;
+      align-items: center;
 
-      .extensions {
-        cursor: pointer;
-        max-width: 4rem;
-        appearance: none;
+      input {
+        flex: 1 1 auto;
+        background: inherit;
+        color: inherit;
+        border: none;
+        outline: none;
       }
     }
 
@@ -540,6 +566,8 @@ export default class App extends Component<{}, Environment> {
   private hasClipboardAccess = false;
   private hoveredImage: HTMLImageElement | null = null;
   private imageData: { [url: string]: ImageData | null } = {};
+  private imageMimeTypes: { [url: string]: string | null } = {};
+  private modalManager = useAnimation<boolean>("settings", "slide-top");
   private notifyTimeout: number = 0;
   private notificationManager = useAnimation<string>(
     "notification",
@@ -548,12 +576,18 @@ export default class App extends Component<{}, Environment> {
   private toFocus: number | null = null;
   private searchCache = new Cache((key) => this.fetchUrls(key));
   private searchInputRef = useRef("search-input");
+  private configItems = configItems.filter(
+    (item) => this.env.isDesktop || !item.apiEventKey
+  );
   private previewCanvasRef = useRef("preview-canvas");
   private willUpdateCanvas: boolean = false;
 
+  private extensionItems: DropdownItem[] = EXTENSIONS.map((ext) => ({
+    id: ext,
+    value: ext.toUpperCase(),
+  }));
   private cols: number = IMAGE_COLS;
   private rows: number = IMAGE_ROWS;
-  private exts: Extension[] = ["all", "gif", "png"];
 
   private get activeImage(): HTMLImageElement | null {
     return this.hoveredImage || this.focusedImage;
@@ -593,9 +627,13 @@ export default class App extends Component<{}, Environment> {
     this.searchCache.load(favorites);
     // Load config
     this.configManager.load();
-    const downloadPath = this.configManager.get("downloadPath");
-    if (downloadPath) {
-      this.env.api.send("set-download-path", downloadPath);
+    for (const item of this.configItems) {
+      if (item.apiEventKey) {
+        const value = this.configManager.get(item.key, item.defaultValue);
+        if (value !== null) {
+          this.env.api.send(item.apiEventKey, value);
+        }
+      }
     }
     // Fetch clipboard permissions
     const status = await navigator.permissions.query({
@@ -619,10 +657,9 @@ export default class App extends Component<{}, Environment> {
         img.addEventListener("load", () => this.drawPreview(), { once: true });
       }
     }
-
-    if (this.toFocus === null) return;
-    this.focusImage(this.toFocus);
-    this.toFocus = null;
+    if (this.toFocus !== null) {
+      this.focusImage(this.toFocus);
+    }
   }
 
   //---------------------------------------------------------------------------
@@ -637,6 +674,10 @@ export default class App extends Component<{}, Environment> {
     this.search();
   }
 
+  private applySearchExtension({ detail }: OwlEvent<DropdownItem>): void {
+    this.state.ext = detail.id as Extension;
+  }
+
   private clearFavorites(): void {
     this.favoritesManager.clear();
     this.state.query = "";
@@ -644,15 +685,15 @@ export default class App extends Component<{}, Environment> {
   }
 
   private closeSettings() {
-    if (!this.state.settingsOpen) return;
-    this.state.settingsOpen = false;
+    if (!this.modalManager.value) return;
+    this.modalManager.value = null;
     this.forceUpdate(true);
   }
 
   private async copyActiveImage(): Promise<void> {
     const img = this.activeImage;
     if (!img || !this.hasClipboardAccess) return;
-    if (this.getImageExtension(img) === "GIF") {
+    if (!this.isActiveImageEditable()) {
       return this.copyActiveImageUrl();
     }
     if (!this.previewCanvasRef.el) return;
@@ -674,8 +715,8 @@ export default class App extends Component<{}, Environment> {
 
   private drawPreview(): void {
     const img = this.activeImage;
-    if (!img) return;
     const canvas = this.previewCanvasRef.el as HTMLCanvasElement;
+    if (!img || !canvas) return;
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
     const ctx = canvas.getContext("2d")!;
@@ -688,40 +729,14 @@ export default class App extends Component<{}, Environment> {
   }
 
   private async fetchUrls(query: string): Promise<string[]> {
-    const queryStepTimings: number[] = [];
-    log(`Search query started.`);
-
-    // Query
-    const queryTime = Date.now();
-    const response = await fetch(getGoogleImageUrl(query), {
-      method: "GET",
-      mode: "cors",
-      headers: {
-        Origin: "https://www.google.com",
-        Referer: "https://www.google.com",
-      },
-    });
-    queryStepTimings.push(Date.now() - queryTime);
-
-    // Stringifying
-    const parsingTime = Date.now();
-    const textResponse = await response.text();
-    queryStepTimings.push(Date.now() - parsingTime);
-
-    // Extracting
-    const extractionTime = Date.now();
-    const matches = textResponse.match(IMAGE_URL_RE) || [];
-    queryStepTimings.push(Date.now() - extractionTime);
-
+    const startTime = Date.now();
+    const url = getGoogleImageUrl(query);
+    const { response } = await ajax(url, { type: "text" });
+    const matches: string[] = response.match(IMAGE_URL_RE) || [];
+    const endTime = Date.now() - startTime;
     log(
-      [
-        `Search query "${query}" finished for a total of ${matches.length} results.`,
-        `{{#00d000}}>{{inherit}} URL loading took {{#ff0080}}${queryStepTimings.shift()}{{inherit}}ms`,
-        `{{#00d000}}>{{inherit}} Response stringifying took {{#ff0080}}${queryStepTimings.shift()}{{inherit}}ms`,
-        `{{#00d000}}>{{inherit}} Image URLs extraction took {{#ff0080}}${queryStepTimings.shift()}{{inherit}}ms`,
-      ].join("\n")
+      `Search query {{#00d000}}"${query}"{{inherit}} finished for a total of ${matches.length} results in {{#ff0080}}${endTime}{{inherit}}ms`
     );
-
     return matches.map((m) => m.slice(1, -1));
   }
 
@@ -738,9 +753,7 @@ export default class App extends Component<{}, Environment> {
     this.setFocusedImage(true, target);
     if (this.focusedImage) {
       target.focus();
-      return;
-    } else {
-      return;
+      this.toFocus = null;
     }
   }
 
@@ -753,10 +766,28 @@ export default class App extends Component<{}, Environment> {
     this.state.updateId++;
   }
 
+  private getActiveImageExtension(): string {
+    const img = this.activeImage;
+    let extension: string | null = null;
+    if (img) {
+      const metadata = this.state.imageMetadata[img.src];
+      if (metadata?.mimetype) {
+        const match = metadata.mimetype.match(IMAGE_MTYPE_RE);
+        if (match && match[1] === "image") {
+          extension = match[2];
+        }
+      }
+      if (!extension) {
+        extension = img.src.split(".").pop() || null;
+      }
+    }
+    return extension || "unknown";
+  }
+
   private getActiveImageSize(): string {
     const { src } = this.activeImage!;
-    const size = this.state.imageSizes[src];
-    return size ? `${size[0]}x${size[1]}` : "loading...";
+    const data = this.state.imageMetadata[src];
+    return data ? `${data.size[0]}x${data.size[1]}` : "loading...";
   }
 
   private getCurrentPageUrls(): string[] {
@@ -779,12 +810,12 @@ export default class App extends Component<{}, Environment> {
     });
   }
 
-  private getFullQuery(): string {
-    const { query, ext } = this.state;
-    let cleanedQuery = cleanQuery(query);
-    if (!cleanedQuery) return "";
-    if (ext !== "all") cleanedQuery += " " + ext;
-    return cleanedQuery;
+  private getFullQuery(clean: boolean = true): string {
+    let query = clean ? cleanQuery(this.state.query) : this.state.query;
+    if (query && this.state.ext !== "all") {
+      query += " " + this.state.ext;
+    }
+    return query;
   }
 
   private getImage(target: HTMLElement | Event): HTMLImageElement | null {
@@ -798,8 +829,12 @@ export default class App extends Component<{}, Environment> {
     }
   }
 
-  private getImageExtension(img: HTMLImageElement): string {
-    return (img.src.split(".").pop() || "???").toUpperCase();
+  private getPagerValue(): string {
+    const count = this.cols * this.rows;
+    const total = this.state.urls.length;
+    const startIndex = this.state.pageIndex * count;
+    const endIndex = Math.min(startIndex + count, total);
+    return `${startIndex + 1}-${endIndex} / ${total}`;
   }
 
   private getSuggestions(): string[] {
@@ -814,10 +849,7 @@ export default class App extends Component<{}, Environment> {
   }
 
   private isActiveImageEditable(): boolean {
-    const img = this.activeImage;
-    return Boolean(
-      img && img.complete && this.getImageExtension(img) !== "GIF"
-    );
+    return EDITABLE_EXTENSIONS.includes(this.getActiveImageExtension());
   }
 
   private notify(message: string): void {
@@ -828,18 +860,13 @@ export default class App extends Component<{}, Environment> {
     }, NOTIFICATION_DELAY);
   }
 
-  private onBackgroundToleranceChanged(ev: Event): void {
-    const target = ev.target as HTMLInputElement;
-    this.imageData = {};
-    this.configManager.set("bgTolerance", Number(target.value));
-  }
-
-  private onDownloadPathChanged(ev: Event): void {
-    const target = ev.target as HTMLInputElement;
-    const downloadPath = target.value.replace(/['"]+/g, "").trim();
-    target.value = downloadPath;
-    this.configManager.set("downloadPath", downloadPath);
-    this.env.api.send("set-download-path", downloadPath);
+  private onConfigValueChanged(item: ConfigItem, ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    input.value = item.format(input.value);
+    this.configManager.set(item.key, input.value);
+    if (item.apiEventKey) {
+      this.env.api.send(item.apiEventKey, input.value);
+    }
   }
 
   private onImageKeydown(index: number, ev: KeyboardEvent): void {
@@ -885,18 +912,23 @@ export default class App extends Component<{}, Environment> {
     }
   }
 
-  private onImageLoad(ev: Event): void {
-    const img = ev.target as HTMLImageElement;
-    this.state.imageSizes[img.src] = [img.naturalWidth, img.naturalHeight];
+  private onImageReady(
+    ev: OwlEvent<{ img: HTMLImageElement; contentType: string }>
+  ): void {
+    const { img, contentType } = ev.detail;
+    this.state.imageMetadata[img.src] = {
+      size: [img.naturalWidth, img.naturalHeight],
+      mimetype: contentType,
+    };
   }
 
   private onSearchKeydown(ev: KeyboardEvent): void {
     const { activeSuggestion } = this.state;
-    const isNull = activeSuggestion === null;
+    const notNull = activeSuggestion !== null;
     switch (ev.key) {
       case "ArrowUp": {
         ev.preventDefault();
-        if (!isNull && activeSuggestion! > 0) {
+        if (notNull && activeSuggestion! > 0) {
           this.state.activeSuggestion!--;
         } else {
           this.state.activeSuggestion = this.getSuggestions().length - 1;
@@ -906,7 +938,7 @@ export default class App extends Component<{}, Environment> {
       case "ArrowDown": {
         ev.preventDefault();
         const suggestions = this.getSuggestions();
-        if (!isNull && activeSuggestion! < suggestions.length - 1) {
+        if (notNull && activeSuggestion! < suggestions.length - 1) {
           this.state.activeSuggestion!++;
         } else {
           this.state.activeSuggestion = 0;
@@ -914,9 +946,13 @@ export default class App extends Component<{}, Environment> {
         return;
       }
       case "Enter": {
-        if (isNull) return;
-        const suggestion = this.getSuggestions()[activeSuggestion!];
-        if (suggestion) this.state.query = suggestion;
+        if (notNull) {
+          const suggestion = this.getSuggestions()[activeSuggestion!];
+          if (suggestion) {
+            this.state.query = suggestion;
+          }
+        }
+        this.search();
         return;
       }
       case "Escape": {
@@ -937,8 +973,8 @@ export default class App extends Component<{}, Environment> {
         return;
       }
       case "Escape": {
-        this.closeSettings();
         this.state.showSuggestions = false;
+        this.closeSettings();
         this.focusSearchBar();
         return;
       }
@@ -968,7 +1004,7 @@ export default class App extends Component<{}, Environment> {
   }
 
   private openSettings() {
-    this.state.settingsOpen = true;
+    this.modalManager.value = true;
   }
 
   private pageNext(): void {
@@ -979,7 +1015,7 @@ export default class App extends Component<{}, Environment> {
     return this.pageSet(this.state.pageIndex - 1, this.rows * this.cols - 1);
   }
 
-  private pageSet(pageIndex: number, focusIndex: number | null = null): void {
+  private pageSet(pageIndex: number, focusIndex: number = 0): void {
     if (
       pageIndex < 0 ||
       pageIndex >= this.pageCount ||
@@ -988,7 +1024,7 @@ export default class App extends Component<{}, Environment> {
       return;
     }
     this.state.pageIndex = pageIndex;
-    this.focusImage(focusIndex ?? 0, true);
+    this.focusImage(focusIndex, true);
   }
 
   private range(n: number): number[] {
@@ -1074,10 +1110,20 @@ export default class App extends Component<{}, Environment> {
   }
 
   private async search(): Promise<void> {
+    const extMatch = this.state.query.match(QUERY_EXTENSION_RE);
+    if (extMatch) {
+      // Applies implicit query extension
+      this.state.ext = extMatch[0] as Extension;
+    }
+    // Cleans final query
+    this.state.query = cleanQuery(this.state.query);
+    const query = this.getFullQuery(false);
+    if (query === this.currentSearch) {
+      return;
+    }
     this.reset("query", "ext");
-    const query = this.getFullQuery();
     this.currentSearch = query;
-    if (!query) {
+    if (!query.length) {
       this.state.urls = [];
       return;
     }

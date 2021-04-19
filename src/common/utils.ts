@@ -1,5 +1,24 @@
 import { IpcRendererEvent } from "electron";
 
+interface AjaxOptions {
+  method?: "GET" | "POST" | "DELETE" | "PUT" | "PATCH";
+  type?: XMLHttpRequestResponseType;
+}
+
+export async function ajax(
+  url: string,
+  options: AjaxOptions = {}
+): Promise<XMLHttpRequest> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.responseType = options.type ?? "json";
+    xhr.onload = () => resolve(xhr);
+    xhr.onerror = () => reject(xhr);
+    xhr.open(options.method ?? "GET", url);
+    xhr.send();
+  });
+}
+
 export function getGoogleImageUrl(query: string): string {
   const formatted = query.replace(/\s+/g, "+");
   return `https://www.google.com/search?q=${formatted}&tbm=isch`;

@@ -1,0 +1,14 @@
+// Override modals to be opened by default
+.modal {
+  display: block !important;
+}
+
+.modal-backdrop {
+  opacity: 0.5;
+  background-color: $white;
+}
+
+// Override dropdowns to be opened by default
+.dropdown-menu {
+  display: block !important;
+}

@@ -12,8 +12,9 @@ export interface DropdownItem {
 
 interface DropdownProps {
   title: string;
-  items: [string, string][];
-  large: boolean;
+  items: DropdownItem[];
+  small?: boolean;
+  deletable?: boolean;
 }
 
 export default class Dropdown extends Component<DropdownProps, Environment> {
@@ -23,33 +24,36 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
   static template = html`
     <div class="dropdown">
       <button
-        type="button"
-        class="btn btn-outline-primary"
-        t-att-class="{'btn-lg': props.large}"
-        t-on-click="state.show = !state.show"
+        class="dropdown-button btn"
+        t-att-class="props.small ? 'badge border border-primary text-primary' : 'btn-outline-primary'"
+        t-on-click="toggle()"
         t-on-keydown="onButtonKeydown"
-        t-esc="props.title"
         t-ref="main-button"
-      ></button>
-      <div t-if="state.show" class="dropdown-menu">
+      >
+        <t t-esc="props.title" />
+        <i
+          t-attf-class="fas fa-caret-{{ state.show ? 'up' : 'down' }} ms-2"
+        ></i>
+      </button>
+      <ul t-if="state.show" class="dropdown-menu">
         <a
           t-foreach="props.items"
           t-as="item"
           t-key="item.id"
           href="#"
           class="dropdown-item"
-          t-on-click="trigger('select', item)"
+          t-on-click="onSelect(item)"
           t-on-keydown="onItemKeydown(item)"
         >
           <span class="item-value">
             <t t-esc="item.value" />
             <span
               t-if="item.badge"
-              class="badge badge-pill border border-primary text-primary ml-2"
+              class="badge rounded-pill border border-primary text-primary ms-2"
               t-esc="item.badge"
             ></span>
           </span>
-          <span class="item-controls ml-2">
+          <span t-if="props.deletable" class="item-controls ms-2">
             <span
               class="remove-item dropdown-action"
               t-on-click.stop="trigger('remove', item)"
@@ -58,30 +62,34 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
             </span>
           </span>
         </a>
-        <div class="dropdown-divider"></div>
-        <div t-if="state.promptClear" class="dropdown-item">
+        <t t-if="props.deletable">
+          <div class="dropdown-divider"></div>
+          <div t-if="state.promptClear" class="dropdown-item">
+            <button
+              class="dropdown-action btn btn-sm text-success"
+              t-on-click.stop="trigger('clear')"
+            >
+              Yes
+              <i class="fas fa-check ms-2"></i>
+            </button>
+            <button
+              class="dropdown-action btn btn-sm text-danger"
+              t-on-click.stop="state.promptClear = false"
+            >
+              No
+              <i class="fas fa-times ms-2"></i>
+            </button>
+          </div>
           <button
-            class="dropdown-action btn text-success"
-            t-on-click.stop="trigger('clear')"
+            t-else=""
+            class="dropdown-item dropdown-action btn text-danger"
+            t-on-click.stop="state.promptClear = true"
+            t-on-keydown="onItemKeydown(null)"
           >
-            <i class="fas fa-check"></i>
+            Clear <i class="fas fa-trash-alt"></i>
           </button>
-          <button
-            class="dropdown-action btn text-danger"
-            t-on-click.stop="state.promptClear = false"
-          >
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <button
-          t-else=""
-          class="dropdown-item dropdown-action btn text-danger"
-          t-on-click.stop="state.promptClear = true"
-          t-on-keydown="onItemKeydown(null)"
-        >
-          Clear <i class="fas fa-trash-alt"></i>
-        </button>
-      </div>
+        </t>
+      </ul>
     </div>
   `;
 
@@ -89,6 +97,11 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
   // TEMPLATE
   //---------------------------------------------------------------------------
   static style = css`
+    .dropdown-button {
+      display: flex;
+      align-items: center;
+    }
+
     .dropdown-item {
       display: flex;
       justify-content: space-between;
@@ -108,13 +121,18 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
 
   constructor() {
     super(...arguments);
-    useExternalListener(window, "click", this.onWindowClick, true);
-    useExternalListener(window, "keydown", this.onWindowKeydown, true);
+    useExternalListener(window, "click", this.onWindowClick);
+    useExternalListener(window, "keydown", this.onWindowKeydown);
   }
 
   //---------------------------------------------------------------------------
   // Private
   //---------------------------------------------------------------------------
+
+  private close(): void {
+    this.state.show = false;
+    this.state.promptClear = false;
+  }
 
   private focusNext(el: HTMLElement): void {
     let next = el.nextSibling as HTMLElement;
@@ -139,11 +157,11 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
   }
 
   private onButtonKeydown({ key }: KeyboardEvent): void {
-    if (key === "ArrowDown") {
-      const firstElement = this.el!.querySelector<HTMLElement>(
-        ".dropdown-item"
-      );
-      firstElement?.focus();
+    switch (key) {
+      case "ArrowDown": {
+        this.el!.querySelector<HTMLElement>(".dropdown-item")?.focus();
+        return;
+      }
     }
   }
 
@@ -166,14 +184,28 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
     }
   }
 
+  private onSelect(item: DropdownItem): void {
+    this.trigger("select", item);
+    this.close();
+  }
+
   private onWindowClick(ev: MouseEvent): void {
-    const target = ev.target as HTMLElement;
-    if (!target.closest(".dropdown-action")) {
-      this.state.show = false;
+    if (!this.el?.contains(ev.target as HTMLElement)) {
+      this.close();
     }
   }
 
   private onWindowKeydown({ key }: KeyboardEvent): void {
-    if (key === "Escape") this.state.show = false;
+    if (key === "Escape") {
+      this.close();
+    }
+  }
+
+  private open(): void {
+    this.state.show = true;
+  }
+
+  private toggle(): void {
+    this.state.show ? this.close() : this.open();
   }
 }

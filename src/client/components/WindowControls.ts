@@ -10,7 +10,7 @@ export default class WindowControls extends Component<any, Environment> {
   //---------------------------------------------------------------------------
   static template = html`
     <nav class="window-controls nav">
-      <div class="text-muted ml-2">v${version}</div>
+      <div class="text-muted ms-2">v${version}</div>
       <ul class="buttons">
         <li>
           <button

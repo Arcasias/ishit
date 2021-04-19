@@ -1,0 +1,8 @@
+// 1. Custom pre-Bootstrap overrides
+@import "./bootstrap-pre";
+// 2. Bootstrap
+@import "../../../node_modules/bootstrap/scss/bootstrap";
+// 3. Custom post-Boostrap overrides
+@import "./bootstrap-post";
+// 4. Custom SCSS
+@import "./custom";
