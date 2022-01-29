@@ -12,13 +12,20 @@
     "export-package": "node export_json.js ./package.json src/package.min.json name,version",
     "build": "npm run prettier && npm run tsc && npm run browserify && npm run sass && npm run minify",
     "dev": "npm run tsc && npm run browserify && npm run sass && npm start",
-    "local": "electron dist/electron/main.js",
-    "start": "electron-forge start",
+    "start": "electron-forge start -- --dev",
     "package": "electron-forge package",
     "make": "npm run build && electron-forge make"
   },
-  "keywords": [],
-  "author": "Julien Mougenot",
+  "keywords": [
+    "image",
+    "search",
+    "editor",
+    "shit"
+  ],
+  "author": {
+    "name": "Julien Mougenot",
+    "email": "julmougenot@gmail.com"
+  },
   "license": "ISC",
   "devDependencies": {
     "@electron-forge/cli": "^6.0.0-beta.54",
@@ -33,7 +40,7 @@
     "sass": "^1.32.8"
   },
   "dependencies": {
-    "@odoo/owl": "^1.2.4"
+    "@odoo/owl": "^1.4.10"
   },
   "config": {
     "forge": {

@@ -4,22 +4,32 @@ import { basename, join, resolve } from "path";
 import { ipcMainLog } from "./../common/utils";
 
 let downloadPath: string | null = null;
+let win: BrowserWindow | null = null;
 
-function onReady(): void {
+const onSecondInstance = (): void => {
+  if (win) {
+    if (win.isMinimized()) {
+      win.restore();
+    }
+    win.focus();
+  }
+};
+
+const onReady = (): void => {
   ipcMain.on("toggle-dev-tools", () => {
     ipcMainLog("toggle-dev-tools");
-    window.webContents.toggleDevTools();
+    win?.webContents.toggleDevTools();
   });
   ipcMain.on("set-download-path", (_, path: string) => {
     ipcMainLog("set-download-path", path);
     downloadPath = path;
   });
-  ipcMain.on("window-close", () => window.close());
-  ipcMain.on("window-minimize", () => window.minimize());
+  ipcMain.on("window-close", () => win?.close());
+  ipcMain.on("window-minimize", () => win?.minimize());
   ipcMain.on("window-maximize", () =>
-    window.isMaximized() ? window.unmaximize() : window.maximize()
+    win?.isMaximized() ? win?.unmaximize() : win?.maximize()
   );
-  const window = new BrowserWindow({
+  win = new BrowserWindow({
     width: 800,
     height: 600,
     minWidth: 800,
@@ -28,35 +38,42 @@ function onReady(): void {
     useContentSize: true,
     icon: join(__dirname, "../../icon.ico"),
     webPreferences: {
+      additionalArguments: process.argv.slice(1),
       contextIsolation: true,
       enableRemoteModule: false,
       preload: join(__dirname, "preload.js"),
     },
   });
-  window.setMenu(null);
-  window.loadFile(`index.html`);
+  win.setMenu(null);
+  win.loadFile(`index.html`);
 
-  window.webContents.session.on("will-download", (_, item) => {
-    const filePath = downloadPath && join(downloadPath, item.getFilename());
-    ipcMainLog("will-download", filePath || "none");
-    if (filePath) {
+  win.webContents.session.on("will-download", (_, item) => {
+    if (downloadPath) {
+      const filePath = join(downloadPath, item.getFilename());
+      ipcMainLog("will-download", filePath);
       item.setSavePath(filePath);
+    } else {
+      ipcMainLog("will-download", "aborted: no file path.");
     }
   });
-}
 
-function handleSquirrelEvent(): boolean {
+  if (process.argv.includes("--dev")) {
+    win.webContents.openDevTools();
+  }
+};
+
+const handleSquirrelEvent = (): boolean => {
   const appFolder = resolve(process.execPath, "..");
   const rootAtomFolder = resolve(appFolder, "..");
   const updateDotExe = resolve(join(rootAtomFolder, "Update.exe"));
   const exeName = basename(process.execPath);
 
-  function spawnAndQuit(...args: string[]): void {
+  const spawnAndQuit = (...args: string[]): void => {
     try {
       const process = spawn(updateDotExe, args, { detached: true });
       process.on("close", app.quit);
     } catch (error) {}
-  }
+  };
 
   switch (process.argv[1]) {
     case "--squirrel-install":
@@ -78,9 +95,12 @@ function handleSquirrelEvent(): boolean {
       return false;
     }
   }
-}
+};
 
-if (!handleSquirrelEvent()) {
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else if (!handleSquirrelEvent()) {
   app.on("window-all-closed", app.quit);
+  app.on("second-instance", onSecondInstance);
   app.on("ready", onReady);
 }

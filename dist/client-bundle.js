@@ -1,4 +1,929 @@
-!function(){return function e(t,n,o){function s(r,a){if(!n[r]){if(!t[r]){var l="function"==typeof require&&require;if(!a&&l)return l(r,!0);if(i)return i(r,!0);var c=new Error("Cannot find module '"+r+"'");throw c.code="MODULE_NOT_FOUND",c}var d=n[r]={exports:{}};t[r][0].call(d.exports,function(e){return s(t[r][1][e]||e)},d,d.exports,e,t,n,o)}return n[r].exports}for(var i="function"==typeof require&&require,r=0;r<o.length;r++)s(o[r]);return s}}()({1:[function(e,t,n){"use strict";Object.defineProperty(n,"__esModule",{value:!0});const o=e("@odoo/owl"),s=e("./classes/Environment"),i=e("./components/App");o.Component.env=s.env,(new i.default).mount(document.body)},{"./classes/Environment":3,"./components/App":5,"@odoo/owl":11}],2:[function(e,t,n){"use strict";var o=this&&this.__awaiter||function(e,t,n,o){return new(n||(n=Promise))(function(s,i){function r(e){try{l(o.next(e))}catch(e){i(e)}}function a(e){try{l(o.throw(e))}catch(e){i(e)}}function l(e){var t;e.done?s(e.value):(t=e.value,t instanceof n?t:new n(function(e){e(t)})).then(r,a)}l((o=o.apply(e,t||[])).next())})};Object.defineProperty(n,"__esModule",{value:!0});n.default=class{constructor(e){this.entries={},this.operation=e}load(e){e&&Object.assign(this.entries,Object.fromEntries(e))}get(e){return o(this,void 0,void 0,function*(){return e in this.entries||(this.entries[e]=yield this.operation(e)),this.entries[e]})}getKeys(){return Object.keys(this.entries)}invalidate(e=null){null===e?this.entries={}:delete this.entries[e]}}},{}],3:[function(e,t,n){"use strict";Object.defineProperty(n,"__esModule",{value:!0}),n.env=void 0;const o=e("@odoo/owl"),{electron:s}=window,i=null!=s?s:{send(){},on(){}},r=Boolean(s);n.env=Object.assign({},o.Component.env,{api:i,isDesktop:r})},{"@odoo/owl":11}],4:[function(e,t,n){"use strict";Object.defineProperty(n,"__esModule",{value:!0}),n.StorageManager=void 0;n.StorageManager=class{constructor(e,{parse:t,serialize:n}={}){this.entries={};const o=new RegExp(`^${e}:(.*)$`);this.getKey=(t=>`${e}:${t}`),this.findKey=(e=>e.match(o)),this.parse=t||(e=>e),this.serialize=n||(e=>e)}clear(){for(const e in this.entries)this.remove(e)}get(e,t=null){return this.has(e)?this.entries[e]:null!==t?this.set(e,t):null}has(e){return e in this.entries}keys(){return Object.keys(this.entries)}load(){for(const[e,t]of Object.entries(localStorage)){const n=this.findKey(e);n&&(this.entries[n[1]]=this.parse(t))}return Object.entries(this.entries)}remove(e){return!!this.has(e)&&(localStorage.removeItem(this.getKey(e)),delete this.entries[e],!0)}set(e,t){return this.entries[e]=t,localStorage.setItem(this.getKey(e),this.serialize(t)),t}}},{}],5:[function(e,t,n){"use strict";var o=this&&this.__awaiter||function(e,t,n,o){return new(n||(n=Promise))(function(s,i){function r(e){try{l(o.next(e))}catch(e){i(e)}}function a(e){try{l(o.throw(e))}catch(e){i(e)}}function l(e){var t;e.done?s(e.value):(t=e.value,t instanceof n?t:new n(function(e){e(t)})).then(r,a)}l((o=o.apply(e,t||[])).next())})};Object.defineProperty(n,"__esModule",{value:!0});const s=e("@odoo/owl"),i=e("../../common/utils"),r=e("../../package.min.json"),a=e("../classes/Cache"),l=e("../classes/StorageManager"),c=e("./Dropdown"),d=e("./ImageComponent"),u=e("./WindowControls"),{xml:h,css:p}=s.tags,{useExternalListener:f,useRef:m,useState:g}=s.hooks,v=["all","gif","png"],_=["png","jpg","jpeg"],w=5,b=5,y=/"https:\/\/[\w\/\.-]+\.(png|jpg|jpeg|gif)"/gi,$=/(image|text)\/(\w+);?/i,x=/\b(gif|png)\b/gi,C="https://",E=2500,L={downloadPath:{key:"downloadPath",text:"Download path",type:"text",defaultValue:null,apiEventKey:"set-download-path",format:e=>e.replace(/['"]+/g,"").trim()},tolerance:{key:"tolerance",text:"Background removal tolerance",type:"range",defaultValue:20,min:1,max:255,format:e=>Number(e)},contiguous:{key:"contiguous",text:"Remove contiguous pixels",type:"checkbox",defaultValue:!0,format:e=>Boolean(e)}};function N(e){return e.toLowerCase().replace(x,"").replace(/['"\<\>]+/g,"").replace(/[\s\n_-]+/g," ").trim()}function k(e,t){const n=m(e),o=g({value:null}),i=`${t}-enter`,r=`${t}-leave`;let a=!1;return s.hooks.onPatched(()=>{if(a&&n.el){a=!1;let e=!0;n.el.addEventListener("animationend",()=>{n.el&&(e?(n.el.classList.remove(i),e=!1):(n.el.classList.remove(r),o.value=null))}),n.el.classList.add(i)}}),{get value(){return o.value},set value(e){var t;null===e?null===(t=n.el)||void 0===t||t.classList.add(r):(o.value=e,n.el||(a=!0))}}}function I(e,t){const n=m(e);let o=!1,i=null;function r(){o&&!n.el?o=!1:!o&&n.el&&(o=!0,i||(i=t(n.el)),n.el.setAttribute("style",i))}s.hooks.onMounted(r),s.hooks.onPatched(r);let a=0;f(window,"resize",()=>{i=null,o=!1,window.clearTimeout(a),a=window.setTimeout(r,250)})}class S extends s.Component{constructor(){super(...arguments),this.state=g({activeSuggestion:null,ext:"all",imageMetadata:{},pageIndex:0,query:"",searching:!1,showSuggestions:!1,updateId:0,urls:[]}),this.currentSearch="",this.configManager=new l.StorageManager("cfg"),this.favoritesManager=new l.StorageManager("fav",{parse:e=>e.split(",").map(e=>C+e),serialize:e=>e.map(e=>e.slice(C.length)).join(",")}),this.focusedImage=null,this.hasClipboardAccess=!1,this.hoveredImage=null,this.imageData={},this.imageMimeTypes={},this.modalManager=k("settings","slide-top"),this.notifyTimeout=0,this.notificationManager=k("notification","slide-right"),this.toFocus=null,this.searchCache=new a.default(e=>this.fetchUrls(e)),this.searchInputRef=m("search-input"),this.filteredConfigItems=Object.values(L).filter(e=>this.env.isDesktop||!e.apiEventKey),this.previewCanvasRef=m("preview-canvas"),this.willUpdateCanvas=!1,this.extensionItems=v.map(e=>({id:e,value:e.toUpperCase()})),this.cols=w,this.rows=b,I("image-gallery",e=>{const{x:t,y:n}=e.getBoundingClientRect();return`height: ${window.innerHeight-n-t}px;`}),I("image-preview",e=>{const{x:t,y:n,width:o}=e.getBoundingClientRect(),s=e.previousElementSibling.getBoundingClientRect(),i=e.nextElementSibling.getBoundingClientRect(),r=n-(s.y+s.height),a=window.innerWidth-t-o;return`height: ${window.innerHeight-n-i.height-r-a}px;`}),f(window,"keydown",this.onWindowKeydown)}get activeImage(){return this.hoveredImage||this.focusedImage}get pageCount(){return Math.ceil(this.state.urls.length/(this.cols*this.rows))}willStart(){return o(this,void 0,void 0,function*(){const e=this.favoritesManager.load();if(this.searchCache.load(e),this.configManager.load(),this.env.isDesktop)for(const e of Object.values(L))if(e.apiEventKey){const t=this.configGet(e.key);null!==t&&this.env.api.send(e.apiEventKey,t)}const t=yield navigator.permissions.query({name:"clipboard-write"});this.hasClipboardAccess="granted"===t.state})}mounted(){document.title=r.name,this.focusSearchBar()}patched(){const e=this.activeImage;this.willUpdateCanvas&&e&&this.previewCanvasRef.el&&(this.willUpdateCanvas=!1,e.complete?this.drawPreview():e.addEventListener("load",()=>this.drawPreview(),{once:!0})),null!==this.toFocus&&this.focusImage(this.toFocus)}applyFavorite({detail:e}){this.state.query=e.value,this.state.ext=e.badge?e.badge.toLowerCase():"all",this.search()}applySearchExtension({detail:e}){this.state.ext=e.id}clearFavorites(){this.favoritesManager.clear(),this.state.query="",this.forceUpdate()}closeSettings(){this.modalManager.value&&(this.modalManager.value=null,this.forceUpdate(!0))}configGet(e){const{format:t,key:n,defaultValue:o}=L[e];return t(this.configManager.get(n,o))}configSet(e,t,n){const o=L[e],s=n.target,i="checkbox"===o.type?"checked":"value";if(s[i]=o.format(s[i]),this.configManager.set(o.key,s[i]),o.apiEventKey)this.env.api.send(o.apiEventKey,s[i]);else{const e=Boolean(this.activeImage&&this.imageData[this.activeImage.src]);this.imageData={},t===this.activeImage&&e&&(this.drawPreview(),this.toggleBackground())}}copyActiveImage(){return o(this,void 0,void 0,function*(){if(!this.activeImage||!this.hasClipboardAccess)return;if(!this.isActiveImageEditable())return this.copyActiveImageUrl();if(!this.previewCanvasRef.el)return;const e=this.previewCanvasRef.el,t=yield new Promise(t=>e.toBlob(e=>t(e),"image/png")),n=[new ClipboardItem({"image/png":t})];yield navigator.clipboard.write(n),this.notify("Image copied!")})}copyActiveImageUrl(){return o(this,void 0,void 0,function*(){const e=this.activeImage;e&&this.hasClipboardAccess&&(yield navigator.clipboard.writeText(e.src),this.notify("URL copied!"))})}drawPreview(){const e=this.activeImage,t=this.previewCanvasRef.el;if(!e||!t)return;t.width=e.naturalWidth,t.height=e.naturalHeight;const n=t.getContext("2d"),o=this.imageData[e.src];o?n.putImageData(o,0,0):n.drawImage(e,0,0)}fetchUrls(e){return o(this,void 0,void 0,function*(){const t=Date.now(),n=(0,i.getGoogleImageUrl)(e),{response:o}=yield(0,i.ajax)(n,{type:"text"}),s=o.match(y)||[],r=Date.now()-t;return(0,i.log)(`Search query {{#00d000}}"${e}"{{inherit}} finished for a total of ${s.length} results in {{#ff0080}}${r}{{inherit}}ms`),s.map(e=>e.slice(1,-1))})}focusImage(e,t=!1){if(t)return void(this.toFocus=e);const n=this.el.querySelectorAll(".image-gallery .image-wrapper")[e];n&&(this.setFocusedImage(!0,n),this.focusedImage&&(n.focus(),this.toFocus=null))}focusSearchBar(){var e;return null===(e=this.searchInputRef.el)||void 0===e?void 0:e.focus()}forceUpdate(e=!1){e&&(this.willUpdateCanvas=!0),this.state.updateId++}getActiveImageExtension(){const e=this.activeImage;let t=null;if(e){const n=this.state.imageMetadata[e.src];if(null==n?void 0:n.mimetype){const e=n.mimetype.match($);e&&"image"===e[1]&&(t=e[2])}t||(t=e.src.split(".").pop()||null)}return t||"unknown"}getActiveImageSize(){const{src:e}=this.activeImage,t=this.state.imageMetadata[e];return t?`${t.size[0]}x${t.size[1]}`:"loading..."}getCurrentPageUrls(){const e=this.rows*this.cols,t=this.state.pageIndex*e;return this.state.urls.slice(t,t+e)}getFavorites(){return this.favoritesManager.keys().map(e=>{let t=null;return{id:e,value:e.replace(x,e=>(t=e.toUpperCase(),"")).trim(),badge:t}})}getFullQuery(e=!0){let t=e?N(this.state.query):this.state.query;return t&&"all"!==this.state.ext&&(t+=" "+this.state.ext),t}getImage(e){return e instanceof Event&&(e=e.target),e instanceof HTMLImageElement?e:e.querySelector("img")}getPagerValue(){const e=this.cols*this.rows,t=this.state.urls.length,n=this.state.pageIndex*e;return`${n+1}-${Math.min(n+e,t)} / ${t}`}getSuggestions(){const e=N(this.state.query);return e?[...new Set(this.searchCache.getKeys().map(N).filter(Boolean))].filter(t=>t!==e&&t.startsWith(e)):[]}isActiveImageEditable(){return _.includes(this.getActiveImageExtension())}notify(e){this.notificationManager.value=e,window.clearTimeout(this.notifyTimeout),this.notifyTimeout=window.setTimeout(()=>{this.notificationManager.value=null},E)}onImageKeydown(e,t){const n=t.target,o=this.rows*this.cols;switch(t.key){case"ArrowUp":{const t=e-this.cols;return void(t>=0&&this.focusImage(t))}case"ArrowDown":{const t=e+this.cols;return void(t<o&&this.focusImage(t))}case"ArrowRight":{const t=e+1;return void(t<o?this.focusImage(t):this.pageNext())}case"ArrowLeft":{const t=e-1;return void(t>=0?this.focusImage(t):this.pagePrev())}case"Escape":return void n.blur();case"c":return void(t.ctrlKey&&this.copyActiveImage())}}onImageReady(e){const{img:t,contentType:n}=e.detail;this.state.imageMetadata[t.src]={size:[t.naturalWidth,t.naturalHeight],mimetype:n}}onSearchKeydown(e){const{activeSuggestion:t}=this.state,n=null!==t;switch(e.key){case"ArrowUp":return e.preventDefault(),void(n&&t>0?this.state.activeSuggestion--:this.state.activeSuggestion=this.getSuggestions().length-1);case"ArrowDown":{e.preventDefault();const o=this.getSuggestions();return void(n&&t<o.length-1?this.state.activeSuggestion++:this.state.activeSuggestion=0)}case"Enter":if(n){const e=this.getSuggestions()[t];e&&(this.state.query=e)}return void this.search();case"Escape":return void(this.state.query="")}}onWindowKeydown({key:e,ctrlKey:t}){switch(e){case"F12":return void this.env.api.send("toggle-dev-tools");case"F5":return void location.reload();case"Escape":return this.state.showSuggestions=!1,this.closeSettings(),void this.focusSearchBar();case"Enter":{const e=document.activeElement;return void((e===document.body||(null==e?void 0:e.classList.contains("image-wrapper")))&&this.copyActiveImage())}case"f":return void(t&&this.focusSearchBar());case"I":return void(t&&this.env.api.send("toggle-dev-tools"));case"r":return void(t&&location.reload())}}openSettings(){this.modalManager.value=!0}pageNext(){return this.pageSet(this.state.pageIndex+1)}pagePrev(){return this.pageSet(this.state.pageIndex-1,this.rows*this.cols-1)}pageSet(e,t=0){e<0||e>=this.pageCount||this.state.pageIndex===e||(this.state.pageIndex=e,this.focusImage(t,!0))}range(e){return(0,i.range)(e)}toggleBackground(){if(!this.previewCanvasRef.el||!this.activeImage)return;if(this.imageData[this.activeImage.src])return delete this.imageData[this.activeImage.src],void this.forceUpdate(!0);const e=this.previewCanvasRef.el,{width:t,height:n}=e,o=e.getContext("2d"),s=o.getImageData(0,0,t,n),r=s.data,a=[0,4*t,t*n*4-4*t,t*n*4],l=[];for(const e of a){if(0===r[e+3])return void this.notify("Background is already transparent!");if(l.length)break;for(const t of a){if(e===t)continue;const n=r.slice(t,t+3),o=r.slice(e,e+3);if(n.every((e,t)=>e===o[t])){l.push(...n);break}}}const[c,d,u]=l.length?l:r,h=this.configGet("contiguous"),p=this.configGet("tolerance");if((0,i.log)(`Replacing color: rgb(${c}, ${d}, ${u}) / tolerance: ${p} / apply to contiguous: ${h}`),h)for(const e of a)(0,i.floodFillPixels)(r,e,t,[c,d,u],p);else for(const e of a)(0,i.fullFillPixels)(r,e,[c,d,u],p);this.imageData[this.activeImage.src]=s,o.putImageData(s,0,0),this.forceUpdate()}removeFavorite({detail:e}){this.favoritesManager.remove(e.id),this.forceUpdate()}reset(...e){const t={activeSuggestion:null,ext:"all",imageMetadata:{},pageIndex:0,query:"",searching:!1,showSuggestions:!1,updateId:0,urls:[]};for(const n of e)delete t[n];Object.assign(this.state,t),this.currentSearch="",this.imageData={}}search(){return o(this,void 0,void 0,function*(){const e=this.state.query.match(x);e&&(this.state.ext=e[0]),this.state.query=N(this.state.query);const t=this.getFullQuery(!1);if(t===this.currentSearch)return;if(this.reset("query","ext"),this.currentSearch=t,!t.length)return void(this.state.urls=[]);let n=null,o=null;this.state.searching=!0;try{n=yield this.searchCache.get(t)}catch(e){o=e}if(t===this.currentSearch){if(!n)throw o;this.state.urls=n,this.focusImage(0,!0),this.state.searching=!1}})}setFocusedImage(e,t){this.focusedImage=e?this.getImage(t):null,this.forceUpdate(!0)}setHoveredImage(e,t){this.hoveredImage=e?this.getImage(t):null,this.forceUpdate(!0)}toggleFavorite(){const e=this.currentSearch;this.favoritesManager.remove(e)||this.favoritesManager.set(e,this.state.urls),this.forceUpdate()}}n.default=S,S.components={ImageComponent:d.default,Dropdown:c.default,WindowControls:u.default},S.template=h`
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const owl_1 = require("@odoo/owl");
+const Environment_1 = require("./classes/Environment");
+const App_1 = require("./components/App");
+owl_1.Component.env = Environment_1.env;
+if (Environment_1.env.api.isDev) {
+    owl_1.config.mode = "dev";
+}
+const app = new App_1.default();
+app.mount(document.body);
+},{"./classes/Environment":3,"./components/App":5,"@odoo/owl":11}],2:[function(require,module,exports){
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+class Cache {
+    constructor(operation) {
+        this.entries = {};
+        this.operation = operation;
+    }
+    load(initialValues) {
+        if (initialValues) {
+            Object.assign(this.entries, Object.fromEntries(initialValues));
+        }
+    }
+    get(key) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!(key in this.entries)) {
+                this.entries[key] = yield this.operation(key);
+            }
+            return this.entries[key];
+        });
+    }
+    getKeys() {
+        return Object.keys(this.entries);
+    }
+    invalidate(key = null) {
+        if (key === null) {
+            this.entries = {};
+        }
+        else {
+            delete this.entries[key];
+        }
+    }
+}
+exports.default = Cache;
+},{}],3:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.env = void 0;
+const owl_1 = require("@odoo/owl");
+const { electron } = window;
+const api = electron !== null && electron !== void 0 ? electron : {
+    send() { },
+    on() { },
+    isDev: false,
+};
+const isDesktop = Boolean(electron);
+exports.env = Object.assign({}, owl_1.Component.env, {
+    api,
+    isDesktop,
+});
+},{"@odoo/owl":11}],4:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.StorageManager = void 0;
+class StorageManager {
+    constructor(key, { parse, serialize } = {}) {
+        this.entries = {};
+        const re = new RegExp(`^${key}:(.*)$`);
+        this.getKey = (k) => `${key}:${k}`;
+        this.findKey = (k) => k.match(re);
+        this.parse = parse || ((v) => v);
+        this.serialize = serialize || ((v) => v);
+    }
+    clear() {
+        for (const key in this.entries) {
+            this.remove(key);
+        }
+    }
+    get(key, defaultValue = null) {
+        if (this.has(key)) {
+            return this.entries[key];
+        }
+        else if (defaultValue !== null) {
+            return this.set(key, defaultValue);
+        }
+        else {
+            return null;
+        }
+    }
+    has(key) {
+        return key in this.entries;
+    }
+    keys() {
+        return Object.keys(this.entries);
+    }
+    load() {
+        for (const [key, value] of Object.entries(localStorage)) {
+            const match = this.findKey(key);
+            if (match)
+                this.entries[match[1]] = this.parse(value);
+        }
+        return Object.entries(this.entries);
+    }
+    remove(key) {
+        if (this.has(key)) {
+            localStorage.removeItem(this.getKey(key));
+            delete this.entries[key];
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    set(key, value) {
+        this.entries[key] = value;
+        localStorage.setItem(this.getKey(key), this.serialize(value));
+        return value;
+    }
+}
+exports.StorageManager = StorageManager;
+},{}],5:[function(require,module,exports){
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const owl_1 = require("@odoo/owl");
+const utils_1 = require("../../common/utils");
+const package_min_json_1 = require("../../package.min.json");
+const Cache_1 = require("../classes/Cache");
+const StorageManager_1 = require("../classes/StorageManager");
+const Dropdown_1 = require("./Dropdown");
+const ImageComponent_1 = require("./ImageComponent");
+const WindowControls_1 = require("./WindowControls");
+const { xml: html, css } = owl_1.tags;
+const { useExternalListener, useRef, useState } = owl_1.hooks;
+const EXTENSIONS = ["all", "gif", "png"];
+const EDITABLE_EXTENSIONS = ["png", "jpg", "jpeg"];
+const IMAGE_COLS = 5;
+const IMAGE_ROWS = 5;
+const IMAGE_URL_RE = /"https:\/\/[\w\/\.-]+\.(png|jpg|jpeg|gif)"/gi;
+const IMAGE_MTYPE_RE = /(image|text)\/(\w+);?/i;
+const QUERY_EXTENSION_RE = /\b(gif|png)\b/gi;
+const HIGHTLIGHT_COLOR = "#ff0080";
+const URL_PREFIX = "https://";
+const NOTIFICATION_DELAY = 2500;
+const historyManager = (function (maxSize) {
+    let done = [];
+    let canceled = [];
+    return {
+        add(action, cancel) {
+            action();
+            done.push({ action, cancel });
+            if (done.length > maxSize) {
+                done.shift();
+            }
+        },
+        undo() {
+            if (!done.length)
+                return;
+            const item = done.pop();
+            item.cancel();
+            canceled.push(item);
+        },
+        redo() {
+            if (!canceled.length)
+                return;
+            const item = canceled.pop();
+            item.action();
+            done.push(item);
+        },
+        clear() {
+            done = [];
+            canceled = [];
+        },
+    };
+})(100);
+const configItems = {
+    downloadPath: {
+        key: "downloadPath",
+        text: "Download path",
+        type: "text",
+        defaultValue: null,
+        apiEventKey: "set-download-path",
+        format: (val) => val.replace(/['"]+/g, "").trim(),
+    },
+    tolerance: {
+        key: "tolerance",
+        text: "Default background removal tolerance",
+        type: "range",
+        defaultValue: 20,
+        min: 1,
+        max: 255,
+        format: (val) => Number(val),
+    },
+    radius: {
+        key: "radius",
+        text: "Default brush radius",
+        type: "range",
+        defaultValue: 50,
+        min: 1,
+        max: 200,
+        format: (val) => Number(val),
+    },
+};
+function cleanQuery(query) {
+    return query
+        .toLowerCase()
+        .replace(QUERY_EXTENSION_RE, "")
+        .replace(/['"\<\>]+/g, "")
+        .replace(/[\s\n_-]+/g, " ")
+        .trim();
+}
+function getDefaultState() {
+    return {
+        activeSuggestion: null,
+        editorTool: null,
+        ext: "all",
+        imageMetadata: {},
+        pageIndex: 0,
+        query: "",
+        searching: false,
+        showImageOptions: false,
+        showSuggestions: false,
+        updateId: 0,
+        urls: [],
+    };
+}
+function useAnimation(refString, animationName) {
+    const ref = useRef(refString);
+    const state = useState({ value: null });
+    const enterCls = `${animationName}-enter`;
+    const leaveCls = `${animationName}-leave`;
+    let willBeInDom = false;
+    owl_1.hooks.onPatched(() => {
+        if (willBeInDom && ref.el) {
+            willBeInDom = false;
+            let isEntering = true;
+            ref.el.addEventListener("animationend", () => {
+                if (!ref.el) {
+                    return;
+                }
+                if (isEntering) {
+                    ref.el.classList.remove(enterCls);
+                    isEntering = false;
+                }
+                else {
+                    ref.el.classList.remove(leaveCls);
+                    state.value = null;
+                }
+            });
+            ref.el.classList.add(enterCls);
+        }
+    });
+    return {
+        get value() {
+            return state.value;
+        },
+        set value(val) {
+            var _a;
+            if (val === null) {
+                (_a = ref.el) === null || _a === void 0 ? void 0 : _a.classList.add(leaveCls);
+            }
+            else {
+                state.value = val;
+                if (!ref.el) {
+                    willBeInDom = true;
+                }
+            }
+        },
+    };
+}
+function useCustomStyle(refString, calcStyle) {
+    const ref = useRef(refString);
+    let isStyleApplied = false;
+    let style = null;
+    function applyStyle() {
+        if (isStyleApplied && !ref.el) {
+            isStyleApplied = false;
+        }
+        else if (!isStyleApplied && ref.el) {
+            isStyleApplied = true;
+            if (!style)
+                style = calcStyle(ref.el);
+            ref.el.setAttribute("style", style);
+        }
+    }
+    owl_1.hooks.onMounted(applyStyle);
+    owl_1.hooks.onPatched(applyStyle);
+    let resizeTimeout = 0;
+    useExternalListener(window, "resize", () => {
+        style = null;
+        isStyleApplied = false;
+        window.clearTimeout(resizeTimeout);
+        resizeTimeout = window.setTimeout(applyStyle, 250);
+    });
+}
+class App extends owl_1.Component {
+    constructor() {
+        super(...arguments);
+        this.state = useState(getDefaultState());
+        this.currentSearch = "";
+        this.configManager = new StorageManager_1.StorageManager("cfg");
+        this.favoritesManager = new StorageManager_1.StorageManager("fav", {
+            parse: (urls) => urls.split(",").map((u) => URL_PREFIX + u),
+            serialize: (urls) => urls.map((u) => u.slice(URL_PREFIX.length)).join(","),
+        });
+        this.focusedImage = null;
+        this.hasClipboardAccess = false;
+        this.hoveredImage = null;
+        this.imageStates = {};
+        this.imageMimeTypes = {};
+        this.modalManager = useAnimation("settings", "slide-top");
+        this.notifyTimeout = 0;
+        this.notificationManager = useAnimation("notification", "slide-right");
+        this.toFocus = null;
+        this.searchCache = new Cache_1.default((key) => this.fetchUrls(key));
+        this.searchInputRef = useRef("search-input");
+        this.filteredConfigItems = Object.values(configItems).filter((item) => this.env.isDesktop || !item.apiEventKey);
+        this.previewCanvasRef = useRef("preview-canvas");
+        this.willUpdateCanvas = false;
+        this.extensionItems = EXTENSIONS.map((ext) => ({
+            id: ext,
+            value: ext.toUpperCase(),
+        }));
+        this.cols = IMAGE_COLS;
+        this.rows = IMAGE_ROWS;
+        useCustomStyle("image-gallery", (el) => {
+            const { x, y } = el.getBoundingClientRect();
+            return `height: ${window.innerHeight - y - x}px;`;
+        });
+        useCustomStyle("image-preview", (el) => {
+            const { x, y, width } = el.getBoundingClientRect();
+            const padding = window.innerWidth - x - width;
+            return `height: ${window.innerHeight - y - padding}px;`;
+        });
+        useExternalListener(window, "keydown", this.onWindowKeydown);
+    }
+    get activeImage() {
+        return this.hoveredImage || this.focusedImage;
+    }
+    get pageCount() {
+        return Math.ceil(this.state.urls.length / (this.cols * this.rows));
+    }
+    willStart() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const favorites = this.favoritesManager.load();
+            this.searchCache.load(favorites);
+            this.configManager.load();
+            if (this.env.isDesktop) {
+                for (const item of Object.values(configItems)) {
+                    if (item.apiEventKey) {
+                        const value = this.configGet(item.key);
+                        if (value !== null) {
+                            this.env.api.send(item.apiEventKey, value);
+                        }
+                    }
+                }
+            }
+            const status = yield navigator.permissions.query({
+                name: "clipboard-write",
+            });
+            this.hasClipboardAccess = status.state === "granted";
+        });
+    }
+    mounted() {
+        document.title = package_min_json_1.name;
+        this.focusSearchBar();
+    }
+    patched() {
+        const img = this.activeImage;
+        if (this.willUpdateCanvas && img && this.previewCanvasRef.el) {
+            this.willUpdateCanvas = false;
+            if (img.complete) {
+                this.drawPreview();
+            }
+            else {
+                img.addEventListener("load", () => this.drawPreview(), { once: true });
+            }
+        }
+        if (this.toFocus !== null) {
+            this.focusImage(this.toFocus);
+        }
+    }
+    applyFavorite({ detail }) {
+        this.state.query = detail.value;
+        this.state.ext = detail.badge
+            ? detail.badge.toLowerCase()
+            : "all";
+        this.search();
+    }
+    applyMutations() {
+        var _a;
+        if (!this.previewCanvasRef.el || !this.activeImage)
+            return;
+        if ((_a = this.imageStates[this.activeImage.src]) === null || _a === void 0 ? void 0 : _a.mutations.length) {
+            const imageState = this.imageStates[this.activeImage.src];
+            const canvas = this.previewCanvasRef.el;
+            const { width, height } = canvas;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(this.activeImage, 0, 0);
+            imageState.imageData = ctx.getImageData(0, 0, width, height);
+            const pixels = imageState.imageData.data;
+            for (const { tool, args } of imageState.mutations) {
+                switch (tool) {
+                    case "backgroundEraser": {
+                        const tolerance = this.getImageParam("tolerance");
+                        utils_1.floodFillPixels(pixels, width, args, tolerance);
+                        break;
+                    }
+                    case "brush": {
+                        const radius = this.getImageParam("radius");
+                        utils_1.drawDot(pixels, width, args, radius);
+                    }
+                }
+            }
+        }
+        else {
+            delete this.imageStates[this.activeImage.src].imageData;
+        }
+        this.forceUpdate(true);
+    }
+    applySearchExtension({ detail }) {
+        this.state.ext = detail.id;
+    }
+    clearFavorites() {
+        this.favoritesManager.clear();
+        this.state.query = "";
+        this.forceUpdate();
+    }
+    closeSettings() {
+        if (!this.modalManager.value)
+            return;
+        this.modalManager.value = null;
+        this.forceUpdate(true);
+    }
+    configGet(configKey) {
+        const { format, key, defaultValue } = configItems[configKey];
+        return format(this.configManager.get(key, defaultValue));
+    }
+    configSet(itemKey, ev) {
+        const item = configItems[itemKey];
+        const input = ev.target;
+        const prop = item.type === "checkbox" ? "checked" : "value";
+        input[prop] = item.format(input[prop]);
+        this.configManager.set(item.key, input[prop]);
+        if (item.apiEventKey) {
+            this.env.api.send(item.apiEventKey, input[prop]);
+        }
+    }
+    copyActiveImage() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const img = this.activeImage;
+            if (!img || !this.hasClipboardAccess)
+                return;
+            if (!this.isActiveImageEditable()) {
+                return this.copyActiveImageUrl();
+            }
+            if (!this.previewCanvasRef.el)
+                return;
+            const canvas = this.previewCanvasRef.el;
+            const blob = yield new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
+            const data = [new ClipboardItem({ "image/png": blob })];
+            yield navigator.clipboard.write(data);
+            this.notify("Image copied!");
+        });
+    }
+    copyActiveImageUrl() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const img = this.activeImage;
+            if (!img || !this.hasClipboardAccess)
+                return;
+            yield navigator.clipboard.writeText(img.src);
+            this.notify("URL copied!");
+        });
+    }
+    drawPreview() {
+        const img = this.activeImage;
+        const canvas = this.previewCanvasRef.el;
+        if (!img || !canvas)
+            return;
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        const imageState = this.imageStates[img.src];
+        if (imageState === null || imageState === void 0 ? void 0 : imageState.imageData) {
+            ctx.putImageData(imageState.imageData, 0, 0);
+        }
+        else {
+            ctx.drawImage(img, 0, 0);
+        }
+    }
+    editPreview(ev) {
+        if (this.state.editorTool === null)
+            return;
+        const canvas = ev.target;
+        const rect = canvas.getBoundingClientRect();
+        const img = this.activeImage;
+        const ratioX = img.naturalWidth / rect.width;
+        const ratioY = img.naturalHeight / rect.height;
+        const x = Math.floor((ev.clientX - rect.x) * ratioX);
+        const y = Math.floor((ev.clientY - rect.y) * ratioY);
+        const state = this.imageStates[img.src];
+        const mutation = {
+            tool: this.state.editorTool,
+            args: [x, y],
+        };
+        historyManager.add(() => state.mutations.push(mutation), () => state.mutations.pop());
+        this.applyMutations();
+    }
+    fetchUrls(query) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const startTime = Date.now();
+            const url = utils_1.getGoogleImageUrl(query);
+            const { response } = yield utils_1.ajax(url, { type: "text" });
+            const matches = response.match(IMAGE_URL_RE) || [];
+            const endTime = Date.now() - startTime;
+            utils_1.log(`Search query {{#00d000}}"${query}"{{inherit}} finished for a total of ${matches.length} results in {{#ff0080}}${endTime}{{inherit}}ms`);
+            return matches.map((m) => m.slice(1, -1));
+        });
+    }
+    focusImage(index, lazy = false) {
+        if (lazy) {
+            this.toFocus = index;
+            return;
+        }
+        const images = this.el.querySelectorAll(".image-gallery .image-wrapper");
+        const target = images[index];
+        if (!target)
+            return;
+        this.setFocusedImage(true, target);
+        if (this.focusedImage) {
+            target.focus();
+            this.toFocus = null;
+        }
+    }
+    focusSearchBar() {
+        var _a;
+        return (_a = this.searchInputRef.el) === null || _a === void 0 ? void 0 : _a.focus();
+    }
+    forceUpdate(updatePreview = false) {
+        if (updatePreview)
+            this.willUpdateCanvas = true;
+        this.state.updateId++;
+    }
+    getActiveImageExtension() {
+        const img = this.activeImage;
+        let extension = null;
+        if (img) {
+            const metadata = this.state.imageMetadata[img.src];
+            if (metadata === null || metadata === void 0 ? void 0 : metadata.mimetype) {
+                const match = metadata.mimetype.match(IMAGE_MTYPE_RE);
+                if (match && match[1] === "image") {
+                    extension = match[2];
+                }
+            }
+            if (!extension) {
+                extension = img.src.split(".").pop() || null;
+            }
+        }
+        return extension || "unknown";
+    }
+    getActiveImageSize() {
+        const { src } = this.activeImage;
+        const data = this.state.imageMetadata[src];
+        return data ? `${data.size[0]}x${data.size[1]}` : "loading...";
+    }
+    getCurrentPageUrls() {
+        const count = this.rows * this.cols;
+        const start = this.state.pageIndex * count;
+        return this.state.urls.slice(start, start + count);
+    }
+    getFavorites() {
+        return this.favoritesManager.keys().map((favorite) => {
+            let badge = null;
+            const id = favorite;
+            const value = favorite
+                .replace(QUERY_EXTENSION_RE, (ext) => {
+                badge = ext.toUpperCase();
+                return "";
+            })
+                .trim();
+            return { id, value, badge };
+        });
+    }
+    getFullQuery(clean = true) {
+        let query = clean ? cleanQuery(this.state.query) : this.state.query;
+        if (query && this.state.ext !== "all") {
+            query += " " + this.state.ext;
+        }
+        return query;
+    }
+    getImage(target) {
+        if (target instanceof Event) {
+            target = target.target;
+        }
+        if (target instanceof HTMLImageElement) {
+            return target;
+        }
+        else {
+            return target.querySelector("img");
+        }
+    }
+    getImageParam(prop) {
+        var _a;
+        const { src } = this.activeImage;
+        const { params } = this.imageStates[src];
+        return (_a = (params && params[prop])) !== null && _a !== void 0 ? _a : this.configGet(prop);
+    }
+    getPagerValue() {
+        const count = this.cols * this.rows;
+        const total = this.state.urls.length;
+        const startIndex = this.state.pageIndex * count;
+        const endIndex = Math.min(startIndex + count, total);
+        return `${startIndex + 1}-${endIndex} / ${total}`;
+    }
+    getSuggestions() {
+        const query = cleanQuery(this.state.query);
+        if (query) {
+            return [
+                ...new Set(this.searchCache.getKeys().map(cleanQuery).filter(Boolean)),
+            ].filter((q) => q !== query && q.startsWith(query));
+        }
+        else {
+            return [];
+        }
+    }
+    isActiveImageEditable() {
+        return EDITABLE_EXTENSIONS.includes(this.getActiveImageExtension());
+    }
+    notify(message) {
+        this.notificationManager.value = message;
+        window.clearTimeout(this.notifyTimeout);
+        this.notifyTimeout = window.setTimeout(() => {
+            this.notificationManager.value = null;
+        }, NOTIFICATION_DELAY);
+    }
+    onImageKeydown(index, ev) {
+        const target = ev.target;
+        const total = this.rows * this.cols;
+        switch (ev.key) {
+            case "ArrowUp": {
+                const newIndex = index - this.cols;
+                if (newIndex >= 0)
+                    this.focusImage(newIndex);
+                return;
+            }
+            case "ArrowDown": {
+                const newIndex = index + this.cols;
+                if (newIndex < total)
+                    this.focusImage(newIndex);
+                return;
+            }
+            case "ArrowRight": {
+                const newIndex = index + 1;
+                if (newIndex < total) {
+                    this.focusImage(newIndex);
+                }
+                else {
+                    this.pageNext();
+                }
+                return;
+            }
+            case "ArrowLeft": {
+                const newIndex = index - 1;
+                if (newIndex >= 0) {
+                    this.focusImage(newIndex);
+                }
+                else {
+                    this.pagePrev();
+                }
+                return;
+            }
+            case "Escape": {
+                target.blur();
+                return;
+            }
+            case "c": {
+                if (ev.ctrlKey)
+                    this.copyActiveImage();
+                return;
+            }
+        }
+    }
+    onImageReady(ev) {
+        const { img, contentType } = ev.detail;
+        this.state.imageMetadata[img.src] = {
+            size: [img.naturalWidth, img.naturalHeight],
+            mimetype: contentType,
+        };
+    }
+    onSearchKeydown(ev) {
+        const { activeSuggestion } = this.state;
+        const notNull = activeSuggestion !== null;
+        switch (ev.key) {
+            case "ArrowUp": {
+                ev.preventDefault();
+                if (notNull && activeSuggestion > 0) {
+                    this.state.activeSuggestion--;
+                }
+                else {
+                    this.state.activeSuggestion = this.getSuggestions().length - 1;
+                }
+                return;
+            }
+            case "ArrowDown": {
+                ev.preventDefault();
+                const suggestions = this.getSuggestions();
+                if (notNull && activeSuggestion < suggestions.length - 1) {
+                    this.state.activeSuggestion++;
+                }
+                else {
+                    this.state.activeSuggestion = 0;
+                }
+                return;
+            }
+            case "Enter": {
+                if (notNull) {
+                    const suggestion = this.getSuggestions()[activeSuggestion];
+                    if (suggestion) {
+                        this.state.query = suggestion;
+                    }
+                }
+                this.search();
+                return;
+            }
+            case "Escape": {
+                this.state.query = "";
+                return;
+            }
+        }
+    }
+    onWindowKeydown({ key, ctrlKey }) {
+        switch (key) {
+            case "F12": {
+                this.env.api.send("toggle-dev-tools");
+                return;
+            }
+            case "F5": {
+                location.reload();
+                return;
+            }
+            case "Escape": {
+                this.state.showSuggestions = false;
+                this.closeSettings();
+                this.focusSearchBar();
+                return;
+            }
+            case "Enter": {
+                const focused = document.activeElement;
+                if (focused === document.body ||
+                    (focused === null || focused === void 0 ? void 0 : focused.classList.contains("image-wrapper"))) {
+                    this.copyActiveImage();
+                }
+                return;
+            }
+            case "f": {
+                if (ctrlKey)
+                    this.focusSearchBar();
+                return;
+            }
+            case "I": {
+                if (ctrlKey)
+                    this.env.api.send("toggle-dev-tools");
+                return;
+            }
+            case "r": {
+                if (ctrlKey)
+                    location.reload();
+                return;
+            }
+            case "y": {
+                if (ctrlKey)
+                    this.redo();
+                return;
+            }
+            case "z": {
+                if (ctrlKey)
+                    this.undo();
+                return;
+            }
+        }
+    }
+    openSettings() {
+        this.modalManager.value = true;
+    }
+    pageNext() {
+        return this.pageSet(this.state.pageIndex + 1);
+    }
+    pagePrev() {
+        return this.pageSet(this.state.pageIndex - 1, this.rows * this.cols - 1);
+    }
+    pageSet(pageIndex, focusIndex = 0) {
+        if (pageIndex < 0 ||
+            pageIndex >= this.pageCount ||
+            this.state.pageIndex === pageIndex) {
+            return;
+        }
+        this.state.pageIndex = pageIndex;
+        this.focusImage(focusIndex, true);
+    }
+    range(n) {
+        return utils_1.range(n);
+    }
+    redo() {
+        historyManager.redo();
+        this.applyMutations();
+    }
+    removeFavorite({ detail }) {
+        this.favoritesManager.remove(detail.id);
+        this.forceUpdate();
+    }
+    reset(...whiteListed) {
+        const newState = getDefaultState();
+        for (const key of whiteListed) {
+            delete newState[key];
+        }
+        Object.assign(this.state, newState);
+        this.currentSearch = "";
+        if (!whiteListed.includes("urls")) {
+            this.imageStates = {};
+        }
+        historyManager.clear();
+    }
+    resetPreview() {
+        const imgState = this.imageStates[this.activeImage.src];
+        const { mutations } = imgState;
+        delete imgState.imageData;
+        historyManager.add(() => (imgState.mutations = []), () => (imgState.mutations = mutations));
+        this.forceUpdate(true);
+    }
+    search() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const extMatch = this.state.query.match(QUERY_EXTENSION_RE);
+            if (extMatch) {
+                this.state.ext = extMatch[0];
+            }
+            this.state.query = cleanQuery(this.state.query);
+            const query = this.getFullQuery(false);
+            if (query === this.currentSearch) {
+                return;
+            }
+            this.reset("query", "ext");
+            this.currentSearch = query;
+            if (!query.length) {
+                this.setUrls([]);
+                return;
+            }
+            let result = null;
+            let error = null;
+            this.state.searching = true;
+            try {
+                result = yield this.searchCache.get(query);
+            }
+            catch (err) {
+                error = err;
+            }
+            if (query === this.currentSearch) {
+                if (result) {
+                    this.setUrls(result);
+                    this.focusImage(0, true);
+                }
+                else {
+                    throw error;
+                }
+                this.state.searching = false;
+            }
+        });
+    }
+    setFocusedImage(set, target) {
+        this.focusedImage = set ? this.getImage(target) : null;
+        this.forceUpdate(true);
+    }
+    setImageParam(prop, ev) {
+        const input = ev.target;
+        const { src } = this.activeImage;
+        const params = this.imageStates[src].params || {};
+        params[prop] = input.value;
+        this.imageStates[src].params = params;
+        this.applyMutations();
+    }
+    setHoveredImage(set, target) {
+        this.hoveredImage = set ? this.getImage(target) : null;
+        this.forceUpdate(true);
+    }
+    setUrls(urls) {
+        this.state.urls = urls;
+        this.imageStates = {};
+        historyManager.clear();
+        for (const url of urls) {
+            this.imageStates[url] = { mutations: [] };
+        }
+    }
+    toggleFavorite() {
+        const query = this.currentSearch;
+        if (!this.favoritesManager.remove(query)) {
+            this.favoritesManager.set(query, this.state.urls);
+        }
+        this.forceUpdate();
+    }
+    undo() {
+        historyManager.undo();
+        this.applyMutations();
+    }
+}
+exports.default = App;
+App.components = { ImageComponent: ImageComponent_1.default, Dropdown: Dropdown_1.default, WindowControls: WindowControls_1.default };
+App.props = {};
+App.template = html `
     <div class="app">
       <t t-set="favorites" t-value="getFavorites()" />
       <t t-set="suggestions" t-value="getSuggestions()" />
@@ -23,9 +948,10 @@
                   t-as="item"
                   t-key="item.key"
                   t-att-class="{ 'mb-3': !item_last, 'form-check': item.type === 'checkbox' }"
-                  t-on-change="configSet(item.key, true)"
+                  t-on-change="configSet(item.key)"
                 >
                   <label
+                    t-att-for="item.key"
                     t-attf-class="form{{ item.type === 'checkbox' ? '-check' : '' }}-label"
                     t-esc="item.text"
                   ></label>
@@ -221,50 +1147,17 @@
             </ul>
           </section>
           <section class="col">
-            <div class="preview me-0" t-if="activeImage">
-              <div class="btn-toolbar">
-                <a
-                  class="btn btn-outline-primary me-2"
-                  title="Download"
-                  download="download"
-                  t-att-href="activeImage.src"
-                  ><i class="fas fa-download"></i
-                ></a>
-                <div class="btn-group">
-                  <button
-                    class="btn btn-outline-primary"
-                    title="Copy image"
-                    t-on-click="copyActiveImage"
-                  >
-                    <i class="fas fa-copy"></i>
-                  </button>
-                  <button
-                    class="btn btn-outline-primary"
-                    title="Copy URL"
-                    t-on-click="copyActiveImageUrl"
-                  >
-                    <i class="fas fa-code"></i>
-                  </button>
-                </div>
-                <div class="image-badges ms-auto">
-                  <span
-                    class="badge border border-primary text-secondary me-2"
-                    t-esc="getActiveImageSize()"
-                  ></span>
-                  <span
-                    class="badge border border-primary text-secondary"
-                    t-esc="getActiveImageExtension().toUpperCase()"
-                  ></span>
-                </div>
-              </div>
-              <div
-                class="image-wrapper my-2"
-                t-ref="image-preview"
-                t-on-click="copyActiveImage"
-              >
+            <div
+              class="preview me-0"
+              t-if="activeImage"
+              t-on-mouseenter="state.showImageOptions = true"
+              t-on-mouseleave="state.showImageOptions = false"
+            >
+              <div class="image-preview" t-ref="image-preview">
                 <canvas
                   t-if="isActiveImageEditable()"
                   t-ref="preview-canvas"
+                  t-on-click="editPreview"
                 ></canvas>
                 <ImageComponent
                   t-else=""
@@ -273,41 +1166,111 @@
                   preload="false"
                 />
               </div>
-              <div t-if="isActiveImageEditable()" class="input-group">
-                <button
-                  class="btn btn-outline-primary"
-                  t-on-click="toggleBackground"
+              <div class="preview-top">
+                <div
+                  t-if="state.showImageOptions"
+                  class="image-actions btn-group"
                 >
-                  Background
-                  <i
-                    t-attf-class="fas fa-toggle-{{ imageData[activeImage.src] ? 'off' : 'on' }}"
-                  ></i>
-                </button>
-                <div class="form-control">
-                  <input
-                    type="range"
-                    class="form-range h-100"
-                    title="Tolerance"
-                    min="${L.tolerance.min}"
-                    max="${L.tolerance.max}"
-                    step="1"
-                    t-att-value="configGet('tolerance')"
-                    t-on-change="configSet('tolerance', activeImage)"
-                  />
+                  <a
+                    class="btn btn-outline-primary bg-white"
+                    title="Download"
+                    download="download"
+                    t-att-href="activeImage.src"
+                    ><i class="fas fa-download"></i
+                  ></a>
+                  <button
+                    class="btn btn-outline-primary bg-white"
+                    title="Copy image"
+                    t-on-click="copyActiveImage"
+                  >
+                    <i class="fas fa-copy"></i>
+                  </button>
+                  <button
+                    class="btn btn-outline-primary bg-white"
+                    title="Copy URL"
+                    t-on-click="copyActiveImageUrl"
+                  >
+                    <i class="fas fa-code"></i>
+                  </button>
                 </div>
-                <label for="contiguous" class="input-group-text">
-                  <input
-                    id="contiguous"
-                    type="checkbox"
-                    class="form-check-input"
-                    title="Remove contiguous pixels"
-                    t-att-checked="configGet('contiguous')"
-                    t-on-change="configSet('contiguous', activeImage)"
-                  />
-                </label>
+                <div class="image-badges ms-auto">
+                  <span
+                    class="badge border border-primary text-secondary bg-white me-2"
+                    t-esc="getActiveImageSize()"
+                  ></span>
+                  <span
+                    class="badge border border-primary text-secondary bg-white"
+                    t-esc="getActiveImageExtension().toUpperCase()"
+                  ></span>
+                </div>
               </div>
-              <div t-else="" class="input-group">
-                <span class="input-group-text w-100">No actions available</span>
+              <div t-if="state.showImageOptions" class="preview-bottom mb-3">
+                <div
+                  t-if="state.editorTool === 'backgroundEraser'"
+                  class="input-group"
+                >
+                  <div class="form-control">
+                    <input
+                      type="range"
+                      class="form-range h-100"
+                      title="Tolerance"
+                      min="${configItems.tolerance.min}"
+                      max="${configItems.tolerance.max}"
+                      step="1"
+                      t-att-value="getImageParam('tolerance')"
+                      t-on-change="setImageParam('tolerance')"
+                    />
+                  </div>
+                </div>
+                <div t-elif="state.editorTool === 'brush'" class="input-group">
+                  <div class="form-control">
+                    <input
+                      type="range"
+                      class="form-range h-100"
+                      title="Radius"
+                      min="${configItems.radius.min}"
+                      max="${configItems.radius.max}"
+                      step="1"
+                      t-att-value="getImageParam('radius')"
+                      t-on-change="setImageParam('radius')"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="preview-left">
+                <div
+                  t-if="state.showImageOptions and isActiveImageEditable()"
+                  class="image-tools btn-group-vertical"
+                >
+                  <button
+                    t-attf-class="btn {{ state.editorTool === 'brush' ? 'btn-primary' : 'btn-outline-primary bg-white' }}"
+                    title="Paint"
+                    t-on-click="state.editorTool = 'brush'"
+                  >
+                    <i class="fas fa-paint-brush"></i>
+                  </button>
+                  <button
+                    t-attf-class="btn {{ state.editorTool === 'backgroundEraser' ? 'btn-primary' : 'btn-outline-primary bg-white' }}"
+                    title="Background eraser"
+                    t-on-click="state.editorTool = 'backgroundEraser'"
+                  >
+                    <i class="fas fa-magic"></i>
+                  </button>
+                  <button
+                    t-attf-class="btn {{ state.editorTool === 'crop' ? 'btn-primary' : 'btn-outline-primary bg-white' }}"
+                    title="Crop image"
+                    t-on-click="state.editorTool = 'crop'"
+                  >
+                    <i class="fas fa-crop"></i>
+                  </button>
+                  <button
+                    class="btn btn-outline-primary bg-white"
+                    title="Reset image"
+                    t-on-click="resetPreview"
+                  >
+                    <i class="fas fa-redo"></i>
+                  </button>
+                </div>
               </div>
             </div>
             <div t-else="" class="default-message">
@@ -323,7 +1286,8 @@
         </div>
       </main>
     </div>
-  `,S.style=p`
+  `;
+App.style = css `
     .app {
       display: flex;
       flex-direction: column;
@@ -359,22 +1323,17 @@
 
     .image-gallery {
       display: grid;
-      grid-template-columns: repeat(${w}, ${100/w}%);
-      grid-template-rows: repeat(${b}, ${100/b}%);
-    }
-
-    .image-badges {
-      display: flex;
-      flex-flow: row nowrap;
-      align-items: center;
+      grid-template-columns: repeat(${IMAGE_COLS}, ${100 / IMAGE_COLS}%);
+      grid-template-rows: repeat(${IMAGE_ROWS}, ${100 / IMAGE_ROWS}%);
     }
 
     .preview {
       height: 100%;
       display: flex;
       flex-flow: column nowrap;
+      position: relative;
 
-      .image-wrapper {
+      .image-preview {
         overflow-y: auto;
 
         img {
@@ -384,6 +1343,31 @@
         canvas {
           width: 100%;
         }
+      }
+
+      .preview-top {
+        position: absolute;
+        top: 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+
+      .preview-bottom {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+
+      .preview-left {
+        position: absolute;
+        left: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
     }
 
@@ -396,7 +1380,7 @@
 
         &.selected,
         &:hover {
-          border-color: ${"#ff0080"};
+          border-color: ${HIGHTLIGHT_COLOR};
           border-radius: 3px;
         }
       }
@@ -418,7 +1402,113 @@
     .page-link[disabled] {
       opacity: 0.4;
     }
-  `},{"../../common/utils":9,"../../package.min.json":10,"../classes/Cache":2,"../classes/StorageManager":4,"./Dropdown":6,"./ImageComponent":7,"./WindowControls":8,"@odoo/owl":11}],6:[function(e,t,n){"use strict";Object.defineProperty(n,"__esModule",{value:!0});const o=e("@odoo/owl"),{xml:s,css:i}=o.tags,{useExternalListener:r,useRef:a,useState:l}=o.hooks;class c extends o.Component{constructor(){super(...arguments),this.buttonRef=a("main-button"),this.state=l({show:!1,promptClear:!1}),r(window,"click",this.onWindowClick),r(window,"keydown",this.onWindowKeydown)}close(){this.state.show=!1,this.state.promptClear=!1}focusNext(e){let t=e.nextSibling;for(;null==t?void 0:t.classList.contains("dropdown-divider");)t=t.nextSibling;(null==t?void 0:t.classList.contains("dropdown-item"))&&t.focus()}focusPrevious(e){let t=e.previousSibling;for(;null==t?void 0:t.classList.contains("dropdown-divider");)t=t.previousSibling;(null==t?void 0:t.classList.contains("dropdown-item"))?t.focus():this.buttonRef.el.focus()}onButtonKeydown({key:e}){var t;switch(e){case"ArrowDown":return void(null===(t=this.el.querySelector(".dropdown-item"))||void 0===t||t.focus())}}onItemKeydown(e,t){const n=t.target;switch(t.key){case"ArrowUp":return this.focusPrevious(n);case"ArrowDown":return this.focusNext(n);case"Delete":return void(e&&(this.focusPrevious(n),this.trigger("remove",e)))}}onSelect(e){this.trigger("select",e),this.close()}onWindowClick(e){var t;(null===(t=this.el)||void 0===t?void 0:t.contains(e.target))||this.close()}onWindowKeydown({key:e}){"Escape"===e&&this.close()}open(){this.state.show=!0}toggle(){this.state.show?this.close():this.open()}}n.default=c,c.template=s`
+  `;
+},{"../../common/utils":9,"../../package.min.json":10,"../classes/Cache":2,"../classes/StorageManager":4,"./Dropdown":6,"./ImageComponent":7,"./WindowControls":8,"@odoo/owl":11}],6:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const owl_1 = require("@odoo/owl");
+const { xml: html, css } = owl_1.tags;
+const { useExternalListener, useRef, useState } = owl_1.hooks;
+class Dropdown extends owl_1.Component {
+    constructor() {
+        super(...arguments);
+        this.buttonRef = useRef("main-button");
+        this.state = useState({
+            show: false,
+            promptClear: false,
+        });
+        useExternalListener(window, "click", this.onWindowClick);
+        useExternalListener(window, "keydown", this.onWindowKeydown);
+    }
+    close() {
+        this.state.show = false;
+        this.state.promptClear = false;
+    }
+    focusNext(el) {
+        let next = el.nextSibling;
+        while (next === null || next === void 0 ? void 0 : next.classList.contains("dropdown-divider")) {
+            next = next.nextSibling;
+        }
+        if (next === null || next === void 0 ? void 0 : next.classList.contains("dropdown-item")) {
+            next.focus();
+        }
+    }
+    focusPrevious(el) {
+        let previous = el.previousSibling;
+        while (previous === null || previous === void 0 ? void 0 : previous.classList.contains("dropdown-divider")) {
+            previous = previous.previousSibling;
+        }
+        if (previous === null || previous === void 0 ? void 0 : previous.classList.contains("dropdown-item")) {
+            previous.focus();
+        }
+        else {
+            this.buttonRef.el.focus();
+        }
+    }
+    onButtonKeydown({ key }) {
+        var _a;
+        switch (key) {
+            case "ArrowDown": {
+                (_a = this.el.querySelector(".dropdown-item")) === null || _a === void 0 ? void 0 : _a.focus();
+                return;
+            }
+        }
+    }
+    onItemKeydown(item, ev) {
+        const target = ev.target;
+        switch (ev.key) {
+            case "ArrowUp": {
+                return this.focusPrevious(target);
+            }
+            case "ArrowDown": {
+                return this.focusNext(target);
+            }
+            case "Delete": {
+                if (item) {
+                    this.focusPrevious(target);
+                    this.trigger("remove", item);
+                }
+                return;
+            }
+        }
+    }
+    onSelect(item) {
+        this.trigger("select", item);
+        this.close();
+    }
+    onWindowClick(ev) {
+        var _a;
+        if (!((_a = this.el) === null || _a === void 0 ? void 0 : _a.contains(ev.target))) {
+            this.close();
+        }
+    }
+    onWindowKeydown({ key }) {
+        if (key === "Escape") {
+            this.close();
+        }
+    }
+    open() {
+        this.state.show = true;
+    }
+    toggle() {
+        this.state.show ? this.close() : this.open();
+    }
+}
+exports.default = Dropdown;
+Dropdown.props = {
+    title: String,
+    items: {
+        type: Array,
+        element: {
+            id: String,
+            value: String,
+            badge: { type: String, optional: true },
+        },
+    },
+    small: { type: Boolean, optional: true },
+    deletable: { type: Boolean, optional: true },
+};
+Dropdown.template = html `
     <div class="dropdown">
       <button
         class="dropdown-button btn"
@@ -488,7 +1578,8 @@
         </t>
       </ul>
     </div>
-  `,c.style=i`
+  `;
+Dropdown.style = css `
     .dropdown-button {
       display: flex;
       align-items: center;
@@ -499,7 +1590,93 @@
       justify-content: space-between;
       align-items: center;
     }
-  `},{"@odoo/owl":11}],7:[function(e,t,n){"use strict";var o=this&&this.__awaiter||function(e,t,n,o){return new(n||(n=Promise))(function(s,i){function r(e){try{l(o.next(e))}catch(e){i(e)}}function a(e){try{l(o.throw(e))}catch(e){i(e)}}function l(e){var t;e.done?s(e.value):(t=e.value,t instanceof n?t:new n(function(e){e(t)})).then(r,a)}l((o=o.apply(e,t||[])).next())})};Object.defineProperty(n,"__esModule",{value:!0});const s=e("@odoo/owl"),i=e("../../common/utils"),{xml:r,css:a}=s.tags,l=/.*\/(.*)\.\w+$/;class c extends s.Component{constructor(){super(...arguments),this.contentType=null,this.state=(0,s.useState)({error:!1,src:this.props.preload?null:this.props.src})}get alt(){return this.props.alt||this.state.src.match(l)[1]}get isLoaded(){return Boolean(this.state.src&&!this.state.error)}willStart(){return o(this,void 0,void 0,function*(){this.props.src&&(yield this.load(this.props.src))})}willUpdateProps(e){return o(this,void 0,void 0,function*(){e.src!==this.props.src&&(this.state.error=!1,this.state.src=e.preload?null:e.src,e.src&&(yield this.load(e.src)))})}load(e){return o(this,void 0,void 0,function*(){this.props.preload?(0,i.ajax)(e,{type:"blob"}).then(t=>{this.contentType=t.getResponseHeader("content-type"),this.state.src=e}).catch(()=>this.onError()):this.state.src=e})}onError(){this.state.error=!0}onLoad(e){const t=e.target;this.state.error=!1,this.trigger("ready",{img:t,contentType:this.contentType})}}n.default=c,c.props={src:String,alt:String,preload:Boolean},c.defaultProps={preload:!0},c.template=r`
+  `;
+},{"@odoo/owl":11}],7:[function(require,module,exports){
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const owl_1 = require("@odoo/owl");
+const utils_1 = require("../../common/utils");
+const { xml: html, css } = owl_1.tags;
+const SRC_FNAME_RE = /.*\/(.*)\.\w+$/;
+function getAltFromSrc(src) {
+    return src.match(SRC_FNAME_RE)[1];
+}
+class ImageComponent extends owl_1.Component {
+    constructor() {
+        super(...arguments);
+        this.contentType = null;
+        this.state = owl_1.useState({
+            error: false,
+            src: (this.props.preload ? null : this.props.src),
+        });
+    }
+    get alt() {
+        return this.props.alt || getAltFromSrc(this.state.src);
+    }
+    get isLoaded() {
+        return Boolean(this.state.src && !this.state.error);
+    }
+    willStart() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.props.src) {
+                yield this.load(this.props.src);
+            }
+        });
+    }
+    willUpdateProps(nextProps) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (nextProps.src !== this.props.src) {
+                this.state.error = false;
+                this.state.src = nextProps.preload ? null : nextProps.src;
+                if (nextProps.src) {
+                    yield this.load(nextProps.src);
+                }
+            }
+        });
+    }
+    load(url) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.props.preload) {
+                utils_1.ajax(url, { type: "blob" })
+                    .then((request) => {
+                    this.contentType = request.getResponseHeader("content-type");
+                    this.state.src = url;
+                })
+                    .catch(() => this.onError());
+            }
+            else {
+                this.state.src = url;
+            }
+        });
+    }
+    onError() {
+        this.state.error = true;
+    }
+    onLoad(ev) {
+        const img = ev.target;
+        this.state.error = false;
+        this.trigger("ready", { img, contentType: this.contentType });
+    }
+}
+exports.default = ImageComponent;
+ImageComponent.props = {
+    src: String,
+    alt: { type: String, optional: true },
+    preload: Boolean,
+};
+ImageComponent.defaultProps = {
+    preload: true,
+};
+ImageComponent.template = html `
     <div class="img-component" t-att-class="{ 'no-image': !isLoaded }">
       <img
         t-if="isLoaded"
@@ -511,7 +1688,8 @@
       <i t-elif="state.error" class="far fa-frown"></i>
       <i t-else="" class="fas fa-circle-notch loading"></i>
     </div>
-  `,c.style=a`
+  `;
+ImageComponent.style = css `
     .img-component {
       width: 100%;
       height: 100%;
@@ -534,9 +1712,25 @@
         animation: spin ease-in-out 1s infinite;
       }
     }
-  `},{"../../common/utils":9,"@odoo/owl":11}],8:[function(e,t,n){"use strict";Object.defineProperty(n,"__esModule",{value:!0});const o=e("@odoo/owl"),s=e("../../package.min.json"),{xml:i,css:r}=o.tags;class a extends o.Component{}n.default=a,a.template=i`
+  `;
+},{"../../common/utils":9,"@odoo/owl":11}],8:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const owl_1 = require("@odoo/owl");
+const package_min_json_1 = require("../../package.min.json");
+const { xml: html, css } = owl_1.tags;
+const DEV_STRING = "Development build";
+class WindowControls extends owl_1.Component {
+    constructor() {
+        super(...arguments);
+        this.title = `${package_min_json_1.name}_${package_min_json_1.version}${this.env.api.isDev ? ` | ${DEV_STRING}` : ""}`;
+    }
+}
+exports.default = WindowControls;
+WindowControls.props = {};
+WindowControls.template = html `
     <nav class="window-controls nav">
-      <div class="text-black-50 ms-2">${s.name} v${s.version}</div>
+      <div class="text-black-50 ms-2" t-esc="title"></div>
       <ul class="buttons">
         <li>
           <button
@@ -570,7 +1764,8 @@
         </li>
       </ul>
     </nav>
-  `,a.style=r`
+  `;
+WindowControls.style = css `
     .window-controls {
       align-items: center;
       justify-content: space-between;
@@ -588,13 +1783,5256 @@
         }
       }
     }
-  `},{"../../package.min.json":10,"@odoo/owl":11}],9:[function(e,t,n){"use strict";var o=this&&this.__awaiter||function(e,t,n,o){return new(n||(n=Promise))(function(s,i){function r(e){try{l(o.next(e))}catch(e){i(e)}}function a(e){try{l(o.throw(e))}catch(e){i(e)}}function l(e){var t;e.done?s(e.value):(t=e.value,t instanceof n?t:new n(function(e){e(t)})).then(r,a)}l((o=o.apply(e,t||[])).next())})};function s(...e){const t=[],n=e.join(" ").replace(/\{\{([\w\s#\(\),)]+)\}\}/g,(e,n)=>(t.push(`color:${n}`),"%c"));console.log(n,...t)}Object.defineProperty(n,"__esModule",{value:!0}),n.range=n.log=n.ipcRendererLog=n.ipcMainLog=n.getGoogleImageUrl=n.floodFillPixels=n.fullFillPixels=n.ajax=void 0,n.ajax=function(e,t={}){return o(this,void 0,void 0,function*(){return new Promise((n,o)=>{var s,i;const r=new XMLHttpRequest;r.responseType=null!==(s=t.type)&&void 0!==s?s:"json",r.onload=(()=>n(r)),r.onerror=(()=>o(r)),r.open(null!==(i=t.method)&&void 0!==i?i:"GET",e),r.send()})})},n.fullFillPixels=function(e,t,[n,o,s],i){const r=i/2,[a,l]=[n-r,n+r],[c,d]=[s-r,s+r],[u,h]=[o-r,o+r];for(let n=t;n<e.length;n+=4)e[n+3]&&e[n]>a&&e[n]<=l&&e[n+1]>u&&e[n+1]<=h&&e[n+2]>c&&e[n+2]<=d&&(e[n+3]=0)},n.floodFillPixels=function(e,t,n,[o,s,i],r){const a=[t],l=r/2,[c,d]=[o-l,o+l],[u,h]=[i-l,i+l],[p,f]=[s-l,s+l];for(;a.length;){const t=a.shift();e[t+3]&&e[t]>c&&e[t]<=d&&e[t+1]>p&&e[t+1]<=f&&e[t+2]>u&&e[t+2]<=h&&(e[t+3]=0,a.push(t+4,t-4,t+4*n,t-4*n))}},n.getGoogleImageUrl=function(e){return`https://www.google.com/search?q=${e.replace(/\s+/g,"+")}&tbm=isch`},n.ipcMainLog=function(...e){s("{{#6610f2}}[IPC-MAIN]{{inherit}}",...e)},n.ipcRendererLog=function(...e){s("{{#007bff}}[IPC-RENDERER]{{inherit}}",...e)},n.log=s,n.range=function(e){return[...new Array(e)].map((e,t)=>t)}},{}],10:[function(e,t,n){t.exports={name:"ishit",version:"0.0.7"}},{}],11:[function(e,t,n){"use strict";Object.defineProperty(n,"__esModule",{value:!0});class o{constructor(){this.subscriptions={}}on(e,t,n){if(!n)throw new Error("Missing callback");this.subscriptions[e]||(this.subscriptions[e]=[]),this.subscriptions[e].push({owner:t,callback:n})}off(e,t){const n=this.subscriptions[e];n&&(this.subscriptions[e]=n.filter(e=>e.owner!==t))}trigger(e,...t){const n=this.subscriptions[e]||[];for(let e=0,o=n.length;e<o;e++){const o=n[e];o.callback.call(o.owner,...t)}}clear(){this.subscriptions={}}}class s{constructor(){this.rev=1,this.allowMutations=!0,this.weakMap=new WeakMap}notifyCB(){}observe(e,t){if(null===e||"object"!=typeof e||e instanceof Date||e instanceof Promise)return e;return(this.weakMap.get(e)||this._observe(e,t)).proxy}revNumber(e){const t=this.weakMap.get(e);return t?t.rev:0}_observe(e,t){var n=this;const o=new Proxy(e,{get(t,o){const s=t[o];return n.observe(s,e)},set(e,t,o){if(o!==e[t]){if(!n.allowMutations)throw new Error(`Observed state cannot be changed here! (key: "${t}", val: "${o}")`);n._updateRevNumber(e),e[t]=o,n.notifyCB()}return!0},deleteProperty:(e,t)=>(t in e&&(delete e[t],n._updateRevNumber(e),n.notifyCB()),!0)}),s={value:e,proxy:o,rev:this.rev,parent:t};return this.weakMap.set(e,s),this.weakMap.set(s.proxy,s),s}_updateRevNumber(e){this.rev++;let t=this.weakMap.get(e),n=e;do{(t=this.weakMap.get(n)).rev++}while((n=t.parent)&&n!==e)}}const i="true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,this,eval,void,Math,RegExp,Array,Object,Date".split(","),r=Object.assign(Object.create(null),{and:"&&",or:"||",gt:">",gte:">=",lt:"<",lte:"<="}),a=Object.assign(Object.create(null),{"{":"LEFT_BRACE","}":"RIGHT_BRACE","[":"LEFT_BRACKET","]":"RIGHT_BRACKET",":":"COLON",",":"COMMA","(":"LEFT_PAREN",")":"RIGHT_PAREN"}),l="...,.,===,==,+,!==,!=,!,||,&&,>=,>,<=,<,?,-,*,/,%,typeof ,=>,=,;,in ".split(",");const c=[function(e){let t=e[0],n=t;if("'"!==t&&'"'!==t)return!1;let o,s=1;for(;e[s]&&e[s]!==n;){if(t+=o=e[s],"\\"===o){if(!(o=e[++s]))throw new Error("Invalid expression");t+=o}s++}if(e[s]!==n)throw new Error("Invalid expression");return{type:"VALUE",value:t+=n}},function(e){let t=e[0];if(t&&t.match(/[0-9]/)){let n=1;for(;e[n]&&e[n].match(/[0-9]|\./);)t+=e[n],n++;return{type:"VALUE",value:t}}return!1},function(e){for(let t of l)if(e.startsWith(t))return{type:"OPERATOR",value:t};return!1},function(e){let t=e[0];if(t&&t.match(/[a-zA-Z_\$]/)){let n=1;for(;e[n]&&e[n].match(/\w/);)t+=e[n],n++;return t in r?{type:"OPERATOR",value:r[t],size:t.length}:{type:"SYMBOL",value:t}}return!1},function(e){const t=e[0];return!!(t&&t in a)&&{type:a[t],value:t}}];function d(e,t){t=Object.create(t);const n=function(e){const t=[];let n=!0;for(;n;)if(e=e.trim()){for(let o of c)if(n=o(e)){t.push(n),e=e.slice(n.size||n.value.length);break}}else n=!1;if(e.length)throw new Error(`Tokenizer error: could not tokenize "${e}"`);return t}(e);for(let e=0;e<n.length;e++){let o=n[e],s=n[e-1],r=n[e+1],a="SYMBOL"===o.type&&!i.includes(o.value);if("SYMBOL"!==o.type||i.includes(o.value)||s&&("OPERATOR"===s.type&&"."===s.value?a=!1:"LEFT_BRACE"!==s.type&&"COMMA"!==s.type||r&&"COLON"===r.type&&(a=!1)),r&&"OPERATOR"===r.type&&"=>"===r.value)if("RIGHT_PAREN"===o.type){let o=e-1;for(;o>0&&"LEFT_PAREN"!==n[o].type;)"SYMBOL"===n[o].type&&n[o].originalValue&&(n[o].value=n[o].originalValue,t[n[o].value]={id:n[o].value,expr:n[o].value}),o--}else t[o.value]={id:o.value,expr:o.value};a&&(o.varName=o.value,o.value in t&&"id"in t[o.value]?o.value=t[o.value].expr:(o.originalValue=o.value,o.value=`scope['${o.value}']`))}return n}const u=/\{\{.*?\}\}/g;class h{constructor(e){this.code=[],this.variables={},this.escaping=!1,this.parentNode=null,this.parentTextNode=null,this.rootNode=null,this.indentLevel=0,this.shouldDefineParent=!1,this.shouldDefineScope=!1,this.protectedScopeNumber=0,this.shouldDefineQWeb=!1,this.shouldDefineUtils=!1,this.shouldDefineRefs=!1,this.shouldDefineResult=!0,this.loopNumber=0,this.inPreTag=!1,this.allowMultipleRoots=!1,this.hasParentWidget=!1,this.hasKey0=!1,this.keyStack=[],this.rootContext=this,this.templateName=e||"noname",this.addLine("let h = this.h;")}generateID(){return h.nextID++}generateTemplateKey(e=""){const t=this.generateID();if(0===this.loopNumber&&!this.hasKey0)return`'${e}__${t}__'`;let n=`\`${e}__${t}__`;for(let e=this.hasKey0?0:1;e<this.loopNumber+1;e++)n+=`\${key${e}}__`;return this.addLine(`let k${t} = ${n}\`;`),`k${t}`}generateCode(){return this.shouldDefineResult&&this.code.unshift("    let result;"),this.shouldDefineScope&&this.code.unshift("    let scope = Object.create(context);"),this.shouldDefineRefs&&this.code.unshift("    context.__owl__.refs = context.__owl__.refs || {};"),this.shouldDefineParent&&(this.hasParentWidget?this.code.unshift("    let parent = extra.parent;"):this.code.unshift("    let parent = context;")),this.shouldDefineQWeb&&this.code.unshift("    let QWeb = this.constructor;"),this.shouldDefineUtils&&this.code.unshift("    let utils = this.constructor.utils;"),this.code}withParent(e){if(!this.allowMultipleRoots&&this===this.rootContext&&(this.parentNode||this.parentTextNode))throw new Error("A template should not have more than one root node");return this.rootContext.rootNode||(this.rootContext.rootNode=e),!this.parentNode&&this.rootContext.shouldDefineResult&&this.addLine(`result = vn${e};`),this.subContext("parentNode",e)}subContext(e,t){const n=Object.create(this);return n[e]=t,n}indent(){this.rootContext.indentLevel++}dedent(){this.rootContext.indentLevel--}addLine(e){const t=new Array(this.indentLevel+2).join("    ");return this.code.push(t+e),this.code.length-1}addIf(e){this.addLine(`if (${e}) {`),this.indent()}addElse(){this.dedent(),this.addLine("} else {"),this.indent()}closeIf(){this.dedent(),this.addLine("}")}getValue(e){return e in this.variables?this.getValue(this.variables[e]):e}formatExpression(e){return this.rootContext.shouldDefineScope=!0,function(e,t){return d(e,t).map(e=>e.value).join("")}(e,this.variables)}captureExpression(e){this.rootContext.shouldDefineScope=!0;const t=this.generateID(),n=d(e,this.variables),o=new Set;return n.map(e=>(e.varName&&(o.has(e.varName)||(o.add(e.varName),this.addLine(`const ${e.varName}_${t} = ${e.value};`)),e.value=`${e.varName}_${t}`),e.value)).join("")}interpolate(e){let t=e.match(u);return t&&t[0].length===e.length?`(${this.formatExpression(e.slice(2,-2))})`:"`"+e.replace(/\{\{.*?\}\}/g,e=>"${"+this.formatExpression(e.slice(2,-2))+"}")+"`"}startProtectScope(e){const t=this.generateID();this.rootContext.protectedScopeNumber++,this.rootContext.shouldDefineScope=!0;return this.addLine(`let _origScope${t} = scope;`),this.addLine("scope = Object.create(scope);"),e||this.addLine("scope.__access_mode__ = 'ro';"),t}stopProtectScope(e){this.rootContext.protectedScopeNumber--,this.addLine(`scope = _origScope${e};`)}}function p(e,t){var n,o,s=t.elm,i=e.data.props,r=t.data.props;if((i||r)&&i!==r){for(n in r=r||{},i=i||{})r[n]||delete s[n];for(n in r)o=r[n],i[n]===o||"value"===n&&s[n]===o||(s[n]=o)}}h.nextID=1;const f={create:p,update:p};function m(e,t,n){if("function"==typeof e)e.call(t,n,t);else if("object"==typeof e)if("function"==typeof e[0])if(2===e.length)e[0].call(t,e[1],n,t);else{var o=e.slice(1);o.push(n),o.push(t),e[0].apply(t,o)}else for(let o=0,s=e.length;o<s;o++)m(e[o],t,n)}function g(){return function e(t){!function(e,t){var n=e.type,o=t.data.on;o&&(o[n]?m(o[n],t,e):o["!"+n]&&m(o["!"+n],t,e))}(t,e.vnode)}}function v(e,t){var n,o=e.data.on,s=e.listener,i=e.elm,r=t&&t.data.on,a=t&&t.elm;if(o!==r){if(o&&s)if(r){for(n in o)if(!r[n]){const e="!"===n.charAt(0);n=e?n.slice(1):n,i.removeEventListener(n,s,e)}}else for(n in o){const e="!"===n.charAt(0);n=e?n.slice(1):n,i.removeEventListener(n,s,e)}if(r){var l=t.listener=e.listener||g();if(l.vnode=t,o){for(n in r)if(!o[n]){const e="!"===n.charAt(0);n=e?n.slice(1):n,a.addEventListener(n,l,e)}}else for(n in r){const e="!"===n.charAt(0);n=e?n.slice(1):n,a.addEventListener(n,l,e)}}}}const _={create:v,update:v,destroy:v},w="http://www.w3.org/1999/xlink",b="http://www.w3.org/XML/1998/namespace",y=58,$=120;function x(e,t){var n,o=t.elm,s=e.data.attrs,i=t.data.attrs;if((s||i)&&s!==i){for(n in s=s||{},i=i||{}){const e=i[n];s[n]!==e&&(!0===e?o.setAttribute(n,""):!1===e?o.removeAttribute(n):n.charCodeAt(0)!==$?o.setAttribute(n,e):n.charCodeAt(3)===y?o.setAttributeNS(b,n,e):n.charCodeAt(5)===y?o.setAttributeNS(w,n,e):o.setAttribute(n,e))}for(n in s)n in i||o.removeAttribute(n)}}const C={create:x,update:x};function E(e,t){var n,o,s,i=e.data.class,r=t.data.class;if((i||r)&&i!==r){for(o in i=i||{},r=r||{},s=t.elm,i)o&&!r[o]&&s.classList.remove(o);for(o in r)(n=r[o])!==i[o]&&s.classList[n?"add":"remove"](o)}}const L={create:E,update:E};function N(e,t,n,o,s){return{sel:e,data:t,children:n,text:o,elm:s,key:void 0===t?void 0:t.key}}function k(e){return void 0===e}function I(e){return void 0!==e}const S=N("",{},[],void 0,void 0);function D(e,t){return e.key===t.key&&e.sel===t.sel}function A(e,t,n){let o,s,i,r={};for(o=t;o<=n;++o)null!=(i=e[o])&&void 0!==(s=i.key)&&(r[s]=o);return r}const P=["create","update","remove","destroy","pre","post"];const T=Array.isArray;function R(e){return"string"==typeof e||"number"==typeof e}const M={createElement:function(e){return document.createElement(e)},createElementNS:function(e,t){return document.createElementNS(e,t)},createTextNode:function(e){return document.createTextNode(e)},createComment:function(e){return document.createComment(e)},insertBefore:function(e,t,n){e.insertBefore(t,n)},removeChild:function(e,t){e.removeChild(t)},appendChild:function(e,t){e.appendChild(t)},parentNode:function(e){return e.parentNode},nextSibling:function(e){return e.nextSibling},tagName:function(e){return e.tagName},setTextContent:function(e,t){e.textContent=t}};function O(e,t,n){if("dummy"!==n&&(e.ns="http://www.w3.org/2000/svg","foreignObject"!==n&&void 0!==t))for(let e=0,n=t.length;e<n;++e){const n=t[e];let o=n.data;void 0!==o&&O(o,n.children,n.sel)}}function j(e,t,n){var o,s,i,r,a={};if(void 0!==n?(a=t,T(n)?o=n:R(n)?s=n:n&&n.sel&&(o=[n])):void 0!==t&&(T(t)?o=t:R(t)?s=t:t&&t.sel?o=[t]:a=t),void 0!==o)for(i=0,r=o.length;i<r;++i)R(o[i])&&(o[i]=N(void 0,void 0,void 0,o[i],void 0));return N(e,a,o,s,void 0)}const U=function(e,t){let n,o,s={};const i=void 0!==t?t:M;for(n=0;n<P.length;++n)for(s[P[n]]=[],o=0;o<e.length;++o){const t=e[o][P[n]];void 0!==t&&s[P[n]].push(t)}function r(e){const t=e.id?"#"+e.id:"",n=e.className?"."+e.className.split(" ").join("."):"";return N(i.tagName(e).toLowerCase()+t+n,{},[],void 0,e)}function a(e,t){return function(){if(0==--t){const t=i.parentNode(e);i.removeChild(t,e)}}}function l(e,t){let n,o,r=e.data;void 0!==r&&I(n=r.hook)&&I(n=n.init)&&(n(e),r=e.data);let a=e.children,c=e.sel;if("!"===c)k(e.text)&&(e.text=""),e.elm=i.createComment(e.text);else if(void 0!==c){const d=e.elm||(e.elm=I(r)&&I(n=r.ns)?i.createElementNS(n,c):i.createElement(c));for(n=0,o=s.create.length;n<o;++n)s.create[n](S,e);if(T(a))for(n=0,o=a.length;n<o;++n){const e=a[n];null!=e&&i.appendChild(d,l(e,t))}else R(e.text)&&i.appendChild(d,i.createTextNode(e.text));I(n=e.data.hook)&&(n.create&&n.create(S,e),n.insert&&t.push(e))}else e.elm=i.createTextNode(e.text);return e.elm}function c(e,t,n,o,s,r){for(;o<=s;++o){const s=n[o];null!=s&&i.insertBefore(e,l(s,r),t)}}function d(e){let t,n,o,i,r=e.data;if(void 0!==r){for(I(t=r.hook)&&I(t=t.destroy)&&t(e),t=0,n=s.destroy.length;t<n;++t)s.destroy[t](e);if(void 0!==e.children)for(o=0,i=e.children.length;o<i;++o)null!=(t=e.children[o])&&"string"!=typeof t&&d(t)}}function u(e,t,n,o){for(;n<=o;++n){let o,r,l,c,u=t[n];if(null!=u)if(I(u.sel)){for(d(u),l=s.remove.length+1,c=a(u.elm,l),o=0,r=s.remove.length;o<r;++o)s.remove[o](u,c);I(o=u.data)&&I(o=o.hook)&&I(o=o.remove)?o(u,c):c()}else i.removeChild(e,u.elm)}}function h(e,t,n){let o,r,a;I(o=t.data)&&I(a=o.hook)&&I(o=a.prepatch)&&o(e,t);const d=t.elm=e.elm;let p=e.children,f=t.children;if(e!==t){if(void 0!==t.data){for(o=0,r=s.update.length;o<r;++o)s.update[o](e,t);I(o=t.data.hook)&&I(o=o.update)&&o(e,t)}k(t.text)?I(p)&&I(f)?p!==f&&function(e,t,n,o){let s,r,a,d,p=0,f=0,m=t.length-1,g=t[0],v=t[m],_=n.length-1,w=n[0],b=n[_];for(;p<=m&&f<=_;)null==g?g=t[++p]:null==v?v=t[--m]:null==w?w=n[++f]:null==b?b=n[--_]:D(g,w)?(h(g,w,o),g=t[++p],w=n[++f]):D(v,b)?(h(v,b,o),v=t[--m],b=n[--_]):D(g,b)?(h(g,b,o),i.insertBefore(e,g.elm,i.nextSibling(v.elm)),g=t[++p],b=n[--_]):D(v,w)?(h(v,w,o),i.insertBefore(e,v.elm,g.elm),v=t[--m],w=n[++f]):(void 0===s&&(s=A(t,p,m)),k(r=s[w.key])?(i.insertBefore(e,l(w,o),g.elm),w=n[++f]):((a=t[r]).sel!==w.sel?i.insertBefore(e,l(w,o),g.elm):(h(a,w,o),t[r]=void 0,i.insertBefore(e,a.elm,g.elm)),w=n[++f]));(p<=m||f<=_)&&(p>m?c(e,d=null==n[_+1]?null:n[_+1].elm,n,f,_,o):u(e,t,p,m))}(d,p,f,n):I(f)?(I(e.text)&&i.setTextContent(d,""),c(d,null,f,0,f.length-1,n)):I(p)?u(d,p,0,p.length-1):I(e.text)&&i.setTextContent(d,""):e.text!==t.text&&(I(p)&&u(d,p,0,p.length-1),i.setTextContent(d,t.text)),I(a)&&I(o=a.postpatch)&&o(e,t)}}return function(e,t){let n,o,a,c;const d=[];for(n=0,o=s.pre.length;n<o;++n)s.pre[n]();for(function(e){return void 0!==e.sel}(e)||(e=r(e)),D(e,t)?h(e,t,d):(a=e.elm,c=i.parentNode(a),l(t,d),null!==c&&(i.insertBefore(c,t.elm,i.nextSibling(a)),u(c,[e],0,0))),n=0,o=d.length;n<o;++n)d[n].data.hook.insert(d[n]);for(n=0,o=s.post.length;n<o;++n)s.post[n]();return t}}([_,C,f,L]);let F=null;const B={setTimeout:window.setTimeout.bind(window),clearTimeout:window.clearTimeout.bind(window),setInterval:window.setInterval.bind(window),clearInterval:window.clearInterval.bind(window),requestAnimationFrame:window.requestAnimationFrame.bind(window),random:Math.random,Date:window.Date,fetch:(window.fetch||(()=>{})).bind(window),get localStorage(){return F||window.localStorage},set localStorage(e){F=e}};const q={};function K(e){if(void 0===e)return"";if("number"==typeof e)return String(e);const t=document.createElement("p");return t.textContent=e,t.innerHTML}function W(e,t){for(let n in e)if(e[n]!==t[n])return!1;return!0}var z=Object.freeze({__proto__:null,whenReady:function(e){return new Promise(function(e){"loading"!==document.readyState?e():document.addEventListener("DOMContentLoaded",e,!1)}).then(e||function(){})},loadJS:function(e){if(e in q)return q[e];const t=new Promise(function(t,n){const o=document.createElement("script");o.type="text/javascript",o.src=e,o.onload=function(){t()},o.onerror=function(){n(`Error loading file '${e}'`)},(document.head||document.getElementsByTagName("head")[0]).appendChild(o)});return q[e]=t,t},loadFile:async function(e){const t=await B.fetch(e);if(!t.ok)throw new Error("Error while fetching xml templates");return await t.text()},escape:K,debounce:function(e,t,n){let o;return function(){const s=this,i=arguments,r=n&&!o;B.clearTimeout(o),o=B.setTimeout(function(){o=null,n||e.apply(s,i)},t),r&&e.apply(s,i)}},shallowEqual:W});const V=["label","title","placeholder","alt"],H=/[\r\n]/,G=/\s+/g,Q=/^(\s*)([\s\S]+?)(\s*)$/,Y={create:"(_, n)",insert:"vn",remove:"(vn, rm)",destroy:"()"};function Z(e){return e&&e.hasOwnProperty("__owl__")}function X(e){return e.map(e=>{if(e.sel){const t=document.createElement(e.sel);return U(t,e).elm.outerHTML}return e.text}).join("")}const J={zero:Symbol("zero"),toObj(e){if("string"==typeof e){if(!(e=e.trim()))return{};let t=e.split(/\s+/),n={};for(let e=0;e<t.length;e++)n[t[e]]=!0;return n}return e},shallowEqual:W,addNameSpace(e){O(e.data,e.children,e.sel)},VDomArray:class extends Array{toString(){return X(this)}},vDomToString:X,getComponent(e){for(;e&&!Z(e);)e=e.__proto__;return e},getScope(e,t){const n=e;for(;e&&!e.hasOwnProperty(t)&&(!e.hasOwnProperty("__access_mode__")||"ro"!==e.__access_mode__);){const t=e.__proto__;if(!t||Z(t))return n;e=t}return e}};function ee(e){const t=(new DOMParser).parseFromString(e,"text/xml");if(t.getElementsByTagName("parsererror").length){let n="Invalid XML in template.";const o=t.getElementsByTagName("parsererror")[0].textContent;if(o){n+="\nThe parser has produced the following error message:\n"+o;const t=/\d+/g,s=t.exec(o);if(s){const i=Number(s[0]),r=e.split("\n")[i-1],a=t.exec(o);if(r&&a){const e=Number(a[0])-1;r[e]&&(n+=`\nThe error might be located at xml line ${i} column ${e}\n`+`${r}\n${"-".repeat(e-1)}^`)}}}throw new Error(n)}return t}function te(e){return e.replace(/\'/g,"\\'")}class ne extends o{constructor(e={}){super(),this.h=j,this.subTemplates={},this.isUpdating=!1,this.templates=Object.create(ne.TEMPLATES),e.templates&&this.addTemplates(e.templates),e.translateFn&&(this.translateFn=e.translateFn)}static addDirective(e){if(e.name in ne.DIRECTIVE_NAMES)throw new Error(`Directive "${e.name} already registered`);ne.DIRECTIVES.push(e),ne.DIRECTIVE_NAMES[e.name]=1,ne.DIRECTIVES.sort((e,t)=>e.priority-t.priority),e.extraNames&&e.extraNames.forEach(e=>ne.DIRECTIVE_NAMES[e]=1)}static registerComponent(e,t){if(ne.components[e])throw new Error(`Component '${e}' has already been registered`);ne.components[e]=t}static registerTemplate(e,t){if(ne.TEMPLATES[e])throw new Error(`Template '${e}' has already been registered`);const n=new ne;n.addTemplate(e,t),ne.TEMPLATES[e]=n.templates[e]}addTemplate(e,t,n){if(n&&e in this.templates)return;const o=ee(t);if(!o.firstChild)throw new Error("Invalid template (should not be empty)");this._addTemplate(e,o.firstChild)}addTemplates(e){const t=("string"==typeof e?ee(e):e).getElementsByTagName("templates")[0];if(t)for(let e of t.children){const t=e.getAttribute("t-name");this._addTemplate(t,e)}}_addTemplate(e,t){if(e in this.templates)throw new Error(`Template ${e} already defined`);this._processTemplate(t);const n={elem:t,fn:function(t,o){const s=this._compile(e);return n.fn=s,s.call(this,t,o)}};this.templates[e]=n}_processTemplate(e){let t=e.querySelectorAll("[t-elif], [t-else]");for(let e=0,n=t.length;e<n;e++){let n=t[e],o=n.previousElementSibling,s=function(e){return o.getAttribute(e)},i=function(e){return+!!n.getAttribute(e)};if(!o||!s("t-if")&&!s("t-elif"))throw new Error("t-elif and t-else directives must be preceded by a t-if or t-elif directive");{if(s("t-foreach"))throw new Error("t-if cannot stay at the same level as t-foreach when using t-elif or t-else");if(["t-if","t-elif","t-else"].map(i).reduce(function(e,t){return e+t})>1)throw new Error("Only one conditional branching directive is allowed per node");let e;for(;(e=n.previousSibling)!==o;){if(e.nodeValue.trim().length&&8!==e.nodeType)throw new Error("text is not allowed between branching directives");e.remove()}}}}render(e,t={},n=null){const o=this.templates[e];if(!o)throw new Error(`Template ${e} does not exist`);return o.fn.call(this,t,n)}renderToString(e,t={},n){const o=this.render(e,t,n);if(void 0===o.sel)return o.text;const s=document.createElement(o.sel),i=U(s,o).elm;return function e(t){3===t.nodeType&&(t.textContent=K(t.textContent));for(let n of t.childNodes)e(n)}(i),i.outerHTML}forceUpdate(){this.isUpdating=!0,Promise.resolve().then(()=>{this.isUpdating&&(this.isUpdating=!1,this.trigger("update"))})}_compile(e,t={}){const n=t.elem||this.templates[e].elem,o=n.attributes.hasOwnProperty("t-debug"),s=new h(e);if("t"!==n.tagName&&(s.shouldDefineResult=!1),t.hasParent&&(s.variables=Object.create(null),s.parentNode=s.generateID(),s.allowMultipleRoots=!0,s.hasParentWidget=!0,s.shouldDefineResult=!1,s.addLine(`let c${s.parentNode} = extra.parentNode;`),t.defineKey&&(s.addLine('let key0 = extra.key || "";'),s.hasKey0=!0)),this._compileNode(n,s),!t.hasParent)if(s.shouldDefineResult)s.addLine("return result;");else{if(!s.rootNode)throw new Error(`A template should have one root node (${s.templateName})`);s.addLine(`return vn${s.rootNode};`)}let i=s.generateCode();const r=s.templateName.replace(/`/g,"'").slice(0,200);let a;i.unshift(`    // Template name: "${r}"`);try{a=new Function("context, extra",i.join("\n"))}catch(e){throw console.groupCollapsed(`Invalid Code generated by ${r}`),console.warn(i.join("\n")),console.groupEnd(),new Error(`Invalid generated code while compiling template '${r}': ${e.message}`)}if(o){const t=this.templates[e];if(t){const e=`Template: ${t.elem.outerHTML}\nCompiled code:\n${a.toString()}`;console.log(e)}}return a}_compileNode(e,t){if(!(e instanceof Element)){let n=e.textContent;if(!t.inPreTag){if(H.test(n)&&!n.trim())return;n=n.replace(G," ")}if(this.translateFn&&"off"!==e.parentNode.getAttribute("t-translation")){const e=Q.exec(n);n=e[1]+this.translateFn(e[2])+e[3]}if(t.parentNode)3===e.nodeType?t.addLine(`c${t.parentNode}.push({text: \`${n}\`});`):8===e.nodeType&&t.addLine(`c${t.parentNode}.push(h('!', \`${n}\`));`);else if(t.parentTextNode)t.addLine(`vn${t.parentTextNode}.text += \`${n}\`;`);else{let e=t.generateID();t.addLine(`let vn${e} = {text: \`${n}\`};`),t.addLine(`result = vn${e};`),t.rootContext.rootNode=e,t.rootContext.parentTextNode=e}return}if("t"!==e.tagName&&e.hasAttribute("t-call")){const t=document.createElement("t");t.setAttribute("t-call",e.getAttribute("t-call")),e.removeAttribute("t-call"),e.prepend(t)}const n=e.tagName[0];if(n===n.toUpperCase())e.setAttribute("t-component",e.tagName);else if("t"!==e.tagName&&e.hasAttribute("t-component"))throw new Error(`Directive 't-component' can only be used on <t> nodes (used on a <${e.tagName}>)`);const o=e.attributes,s=[],i=[];for(let t=0;t<o.length;t++){let n=o[t].name;if(n.startsWith("t-")){if(!(n.slice(2).split(/-|\./)[0]in ne.DIRECTIVE_NAMES))throw new Error(`Unknown QWeb directive: '${n}'`);if("t"!==e.tagName&&("t-esc"===n||"t-raw"===n)){const t=document.createElement("t");t.setAttribute(n,e.getAttribute(n));for(let n of Array.from(e.childNodes))t.appendChild(n);e.appendChild(t),e.removeAttribute(n)}}}const r=ne.DIRECTIVES.length,a=o.length;let l=!1;for(let e=0;e<r;e++){let t,n,i=ne.DIRECTIVES[e];for(let e=0;e<a;e++){const r=o[e].name;(r==="t-"+i.name||r.startsWith("t-"+i.name+"-")||r.startsWith("t-"+i.name+"."))&&(t=r,n=o[e].textContent,s.push({directive:i,value:n,fullName:t}),"on"!==i.name&&"model"!==i.name||(l=!0))}}for(let{directive:n,value:o,fullName:r}of s)if(n.finalize&&i.push({directive:n,value:o,fullName:r}),n.atNodeEncounter){if(n.atNodeEncounter({node:e,qweb:this,ctx:t,fullName:r,value:o})){for(let{directive:n,value:o,fullName:s}of i)n.finalize({node:e,qweb:this,ctx:t,fullName:s,value:o});return}}if("t"!==e.nodeName){let n=this._compileGenericNode(e,t,l);t=t.withParent(n);let o={},i=function(e,t){o[e]=o[e]||[],o[e].push(t)};for(let{directive:o,value:r,fullName:a}of s)o.atNodeCreation&&o.atNodeCreation({node:e,qweb:this,ctx:t,fullName:a,value:r,nodeID:n,addNodeHook:i});if(Object.keys(o).length){t.addLine(`p${n}.hook = {`);for(let e in o){t.addLine(`  ${e}: ${Y[e]} => {`);for(let n of o[e])t.addLine(`    ${n}`);t.addLine("  },")}t.addLine("};")}}"pre"===e.nodeName&&(t=t.subContext("inPreTag",!0)),this._compileChildren(e,t),("svg"===e.nodeName||"g"===e.nodeName&&t.rootNode===t.parentNode)&&(t.rootContext.shouldDefineUtils=!0,t.addLine(`utils.addNameSpace(vn${t.parentNode});`));for(let{directive:n,value:o,fullName:s}of i)n.finalize({node:e,qweb:this,ctx:t,fullName:s,value:o})}_compileGenericNode(e,t,n=!0){if(1!==e.nodeType)throw new Error("unsupported node type");const o=e.attributes,s=[],i=[],r=[];function a(t,n){let o=!1;switch(e.nodeName){case"input":let n=e.getAttribute("type");"checkbox"!==n&&"radio"!==n||"checked"!==t&&"indeterminate"!==t||(o=!0),"value"!==t&&"readonly"!==t&&"disabled"!==t||(o=!0);break;case"option":o="selected"===t||"disabled"===t;break;case"textarea":o="readonly"===t||"disabled"===t;break;case"button":case"select":case"optgroup":o="disabled"===t}o&&i.push(`${t}: _${n}`)}let l="";for(let n=0;n<o.length;n++){let i=o[n].name,c=o[n].textContent;if(this.translateFn&&V.includes(i)&&(c=this.translateFn(c)),!i.startsWith("t-")&&!e.getAttribute("t-attf-"+i)){const e=t.generateID();if("class"===i){if(c=c.trim()){let e=c.split(/\s+/).map(e=>`'${te(e)}':true`).join(",");l?t.addLine(`Object.assign(${l}, {${e}})`):(l=`_${t.generateID()}`,t.addLine(`let ${l} = {${e}};`))}}else t.addLine(`let _${e} = '${te(c)}';`),i.match(/^[a-zA-Z]+$/)||(i='"'+i+'"'),s.push(`${i}: _${e}`),a(i,e)}if(i.startsWith("t-att-")){let n=i.slice(6);const o=t.getValue(c);let r="string"==typeof o?t.formatExpression(o):`scope.${o.id}`;if("class"===n)t.rootContext.shouldDefineUtils=!0,r=`utils.toObj(${r})`,l?t.addLine(`Object.assign(${l}, ${r})`):(l=`_${t.generateID()}`,t.addLine(`let ${l} = ${r};`));else{const o=t.generateID();n.match(/^[a-zA-Z]+$/)||(n='"'+n+'"');const i=e.getAttribute(n);if(i){const e=t.generateID();t.addLine(`let _${e} = ${r};`),r=`'${i}' + (_${e} ? ' ' + _${e} : '')`;const o=s.findIndex(e=>e.startsWith(n+":"));s.splice(o,1)}t.addLine(`let _${o} = ${r};`),s.push(`${n}: _${o}`),a(n,o)}}if(i.startsWith("t-attf-")){let n=i.slice(7);n.match(/^[a-zA-Z]+$/)||(n='"'+n+'"');const o=t.interpolate(c),r=t.generateID();let a=e.getAttribute(n);a?t.addLine(`let _${r} = '${a} ' + ${o};`):t.addLine(`let _${r} = ${o};`),s.push(`${n}: _${r}`)}if("t-att"===i){let e=t.generateID();t.addLine(`let _${e} = ${t.formatExpression(c)};`),r.push(e)}}let c=t.generateID();const d=[`key:${t.loopNumber||t.hasKey0?`\`\${key${t.loopNumber}}_${c}\``:c}`];s.length+r.length>0&&d.push(`attrs:{${s.join(",")}}`),i.length>0&&d.push(`props:{${i.join(",")}}`),l&&d.push(`class:${l}`),n&&d.push("on:{}"),t.addLine(`let c${c} = [], p${c} = {${d.join(",")}};`);for(let e of r)t.addIf(`_${e} instanceof Array`),t.addLine(`p${c}.attrs[_${e}[0]] = _${e}[1];`),t.addElse(),t.addLine(`for (let key in _${e}) {`),t.indent(),t.addLine(`p${c}.attrs[key] = _${e}[key];`),t.dedent(),t.addLine("}"),t.closeIf();return t.addLine(`let vn${c} = h('${e.nodeName}', p${c}, c${c});`),t.parentNode?t.addLine(`c${t.parentNode}.push(vn${c});`):(t.loopNumber||t.hasKey0)&&(t.rootContext.shouldDefineResult=!0,t.addLine(`result = vn${c};`)),c}_compileChildren(e,t){if(e.childNodes.length>0)for(let n of Array.from(e.childNodes))this._compileNode(n,t)}}ne.utils=J,ne.components=Object.create(null),ne.DIRECTIVE_NAMES={name:1,att:1,attf:1,translation:1},ne.DIRECTIVES=[],ne.TEMPLATES={},ne.nextId=1,ne.dev=!1,ne.enableTransitions=!0,ne.slots={},ne.nextSlotId=1,ne.subTemplates={};const oe=new DOMParser;function se(e){if(!(e instanceof Element))return e instanceof Comment?j("!",e.textContent):{text:e.textContent};const t={};for(let n of e.attributes)t[n.name]=n.textContent;const n=[];for(let t of e.childNodes)n.push(se(t));const o=j(e.tagName,{attrs:t},n);return"svg"===o.sel&&O(o.data,o.children,o.sel),o}function ie(e,t,n,o){if(o.rootContext.shouldDefineScope=!0,"0"===e){if(o.parentNode){o.rootContext.shouldDefineUtils=!0;const e=o.escaping?"{text: utils.vDomToString(scope[utils.zero])}":"...scope[utils.zero]";o.addLine(`c${o.parentNode}.push(${e});`)}return}let s;if("string"==typeof e?(s=`_${o.generateID()}`,o.addLine(`let ${s} = ${o.formatExpression(e)};`)):s=`scope.${e.id}`,o.addIf(`${s} != null`),o.escaping){let t;if(e.hasBody&&(o.rootContext.shouldDefineUtils=!0,t=o.startProtectScope(),o.addLine(`${s} = ${s} instanceof utils.VDomArray ? utils.vDomToString(${s}) : ${s};`)),o.parentTextNode)o.addLine(`vn${o.parentTextNode}.text += ${s};`);else if(o.parentNode)o.addLine(`c${o.parentNode}.push({text: ${s}});`);else{let e=o.generateID();o.rootContext.rootNode=e,o.rootContext.parentTextNode=e,o.addLine(`let vn${e} = {text: ${s}};`),o.rootContext.shouldDefineResult&&o.addLine(`result = vn${e}`)}e.hasBody&&o.stopProtectScope(t)}else o.rootContext.shouldDefineUtils=!0,e.hasBody?(o.addLine(`const vnodeArray = ${s} instanceof utils.VDomArray ? ${s} : utils.htmlToVDOM(${s});`),o.addLine(`c${o.parentNode}.push(...vnodeArray);`)):o.addLine(`c${o.parentNode}.push(...utils.htmlToVDOM(${s}));`);t.childNodes.length&&(o.addElse(),n._compileChildren(t,o)),o.closeIf()}ne.utils.htmlToVDOM=function(e){const t=oe.parseFromString(e,"text/html"),n=[];for(let e of t.body.childNodes)n.push(se(e));return n},ne.addDirective({name:"esc",priority:70,atNodeEncounter:({node:e,qweb:t,ctx:n})=>(ie(n.getValue(e.getAttribute("t-esc")),e,t,n.subContext("escaping",!0)),!0)}),ne.addDirective({name:"raw",priority:80,atNodeEncounter:({node:e,qweb:t,ctx:n})=>(ie(n.getValue(e.getAttribute("t-raw")),e,t,n),!0)}),ne.addDirective({name:"set",extraNames:["value"],priority:60,atNodeEncounter({node:e,qweb:t,ctx:n}){n.rootContext.shouldDefineScope=!0;const o=e.getAttribute("t-set");let s=e.getAttribute("t-value");n.variables[o]=n.variables[o]||{};let i=n.variables[o];const r=e.hasChildNodes();if(i.id=o,i.expr=`scope.${o}`,s){const e=n.formatExpression(s);let t="scope";n.protectedScopeNumber&&(n.rootContext.shouldDefineUtils=!0,t=`utils.getScope(scope, '${o}')`),n.addLine(`${t}.${o} = ${e};`),i.value=e}if(r){n.rootContext.shouldDefineUtils=!0,s&&n.addIf(`!(${i.expr})`);const o=n.generateID(),r=n.parentNode;n.parentNode=o,n.addLine(`let c${o} = new utils.VDomArray();`);const a=e.cloneNode(!0);for(let e of["t-set","t-value","t-if","t-else","t-elif"])a.removeAttribute(e);t._compileNode(a,n),n.addLine(`${i.expr} = c${o}`),i.value=`c${o}`,i.hasBody=!0,n.parentNode=r,s&&n.closeIf()}return!0}}),ne.addDirective({name:"if",priority:20,atNodeEncounter({node:e,ctx:t}){let n=t.getValue(e.getAttribute("t-if"));return t.addIf("string"==typeof n?t.formatExpression(n):`scope.${n.id}`),!1},finalize({ctx:e}){e.closeIf()}}),ne.addDirective({name:"elif",priority:30,atNodeEncounter({node:e,ctx:t}){let n=t.getValue(e.getAttribute("t-elif"));return t.addLine(`else if (${"string"==typeof n?t.formatExpression(n):`scope.${n.id}`}) {`),t.indent(),!1},finalize({ctx:e}){e.closeIf()}}),ne.addDirective({name:"else",priority:40,atNodeEncounter:({ctx:e})=>(e.addLine("else {"),e.indent(),!1),finalize({ctx:e}){e.closeIf()}}),ne.addDirective({name:"call",priority:50,atNodeEncounter({node:e,qweb:t,ctx:n}){n.rootContext.shouldDefineScope=!0,n.rootContext.shouldDefineUtils=!0;const o=e.getAttribute("t-call"),s=u.test(o),i=t.templates[o];if(!s&&!i)throw new Error(`Cannot find template "${o}" (t-call)`);let r;if(s){const e=n.generateID();n.addLine(`let tname${e} = ${n.interpolate(o)};`),n.addLine(`let tid${e} = this.subTemplates[tname${e}];`),n.addIf(`!tid${e}`),n.addLine(`tid${e} = this.constructor.nextId++;`),n.addLine(`this.subTemplates[tname${e}] = tid${e};`),n.addLine(`this.constructor.subTemplates[tid${e}] = this._compile(tname${e}, {hasParent: true, defineKey: true});`),n.closeIf(),r=`tid${e}`}else{let e=t.subTemplates[o];if(!e){e=ne.nextId++,t.subTemplates[o]=e;const n=t._compile(o,{hasParent:!0,defineKey:!0});ne.subTemplates[e]=n}r=`'${e}'`}let a=e.hasChildNodes();const l=n.startProtectScope();if(a){n.addLine("{"),n.indent();const o=e.cloneNode(!0);for(let e of["t-if","t-else","t-elif","t-call"])o.removeAttribute(e);n.addLine("{"),n.indent(),n.addLine("let c__0 = [];"),t._compileNode(o,n.subContext("parentNode","__0")),n.rootContext.shouldDefineUtils=!0,n.addLine("scope[utils.zero] = c__0;"),n.dedent(),n.addLine("}")}const c=n.generateTemplateKey(),d=`Object.assign({}, extra, {parentNode: ${n.parentNode?`c${n.parentNode}`:"result"}, parent: utils.getComponent(context), key: ${c}})`;return n.parentNode?n.addLine(`this.constructor.subTemplates[${r}].call(this, scope, ${d});`):(n.rootContext.shouldDefineResult=!0,n.addLine("result = []"),n.addLine(`this.constructor.subTemplates[${r}].call(this, scope, ${d});`),n.addLine("result = result[0]")),a&&(n.dedent(),n.addLine("}")),n.stopProtectScope(l),!0}}),ne.addDirective({name:"foreach",extraNames:["as"],priority:10,atNodeEncounter({node:e,qweb:t,ctx:n}){n.rootContext.shouldDefineScope=!0,n=n.subContext("loopNumber",n.loopNumber+1);const o=e.getAttribute("t-foreach"),s=e.getAttribute("t-as");let i=n.generateID();n.addLine(`let _${i} = ${n.formatExpression(o)};`),n.addLine(`if (!_${i}) { throw new Error('QWeb error: Invalid loop expression')}`);let r=n.generateID(),a=n.generateID();n.addLine(`let _${r} = _${a} = _${i};`),n.addIf(`!(_${i} instanceof Array)`),n.addLine(`_${r} = Object.keys(_${i});`),n.addLine(`_${a} = Object.values(_${i});`),n.closeIf(),n.addLine(`let _length${r} = _${r}.length;`);let l=n.startProtectScope(!0);const c=`i${n.loopNumber}`;n.addLine(`for (let ${c} = 0; ${c} < _length${r}; ${c}++) {`),n.indent(),n.addLine(`scope.${s}_first = ${c} === 0`),n.addLine(`scope.${s}_last = ${c} === _length${r} - 1`),n.addLine(`scope.${s}_index = ${c}`),n.addLine(`scope.${s} = _${r}[${c}]`),n.addLine(`scope.${s}_value = _${a}[${c}]`);const d=e.cloneNode(!0);if(!d.hasAttribute("t-key")&&1===e.children.length&&"t"!==e.children[0].tagName&&!e.children[0].hasAttribute("t-key")&&console.warn(`Directive t-foreach should always be used with a t-key! (in template: '${n.templateName}')`),d.hasAttribute("t-key")){const e=n.formatExpression(d.getAttribute("t-key"));n.addLine(`let key${n.loopNumber} = ${e};`),d.removeAttribute("t-key")}else n.addLine(`let key${n.loopNumber} = i${n.loopNumber};`);return d.removeAttribute("t-foreach"),t._compileNode(d,n),n.dedent(),n.addLine("}"),n.stopProtectScope(l),!0}}),ne.addDirective({name:"debug",priority:1,atNodeEncounter({ctx:e}){e.addLine("debugger;")}}),ne.addDirective({name:"log",priority:1,atNodeEncounter({ctx:e,value:t}){const n=e.formatExpression(t);e.addLine(`console.log(${n})`)}});const re={prevent:"e.preventDefault();",self:"if (e.target !== this.elm) {return}",stop:"e.stopPropagation();"},ae=/^[$A-Z_][0-9A-Z_$]*$/i;function le(e,t,n,o,s=re){let i,[r,...a]=t.slice(5).split(".");if(a.includes("capture")&&(r="!"+r),!r)throw new Error("Missing event name with t-on directive");let l="";const c=n.replace(/\(.*\)/,function(e){return l=e.slice(1,-1),""});if(c.match(ae)){e.rootContext.shouldDefineUtils=!0;const t="utils.getComponent(context)";if(l){const n=e.generateID();e.addLine(`let args${n} = [${e.formatExpression(l)}];`),i=`${t}['${c}'](...args${n}, e);`,o=!1}else i=`${t}['${c}'](e);`}else o=!1,i=e.captureExpression(n);let d=`function (e) {if (context.__owl__.status === 5){return}${a.map(e=>s[e]).join("")}${i}}`;if(o){const t=e.generateTemplateKey(r);e.addLine(`extra.handlers[${t}] = extra.handlers[${t}] || ${d};`),d=`extra.handlers[${t}]`}return{event:r,handler:d}}function ce(e){return 1e3*Number(e.slice(0,-1).replace(",","."))}function de(e,t){if(!e.parentNode)return;const n=window.getComputedStyle(e);(function(e,t){for(;e.length<t.length;)e=e.concat(e);return Math.max.apply(null,t.map((t,n)=>ce(t)+ce(e[n])))})((n.transitionDelay||"").split(", "),(n.transitionDuration||"").split(", "))>0?e.addEventListener("transitionend",t,{once:!0}):t()}ne.addDirective({name:"on",priority:90,atNodeCreation({ctx:e,fullName:t,value:n,nodeID:o}){const{event:s,handler:i}=le(e,t,n,!0);e.addLine(`p${o}.on['${s}'] = ${i};`)}}),ne.addDirective({name:"ref",priority:95,atNodeCreation({ctx:e,value:t,addNodeHook:n}){e.rootContext.shouldDefineRefs=!0;const o=`ref${e.generateID()}`;e.addLine(`const ${o} = ${e.interpolate(t)};`),n("create",`context.__owl__.refs[${o}] = n.elm;`),n("destroy",`delete context.__owl__.refs[${o}];`)}}),ne.utils.nextFrame=function(e){requestAnimationFrame(()=>requestAnimationFrame(e))},ne.utils.transitionInsert=function(e,t){const n=e.elm,o=n.parentElement&&n.parentElement.querySelector(`*[data-owl-key='${e.key}']`);o&&o.remove(),n.classList.add(t+"-enter"),n.classList.add(t+"-enter-active"),n.classList.remove(t+"-leave-active"),n.classList.remove(t+"-leave-to");const s=()=>{n.classList.remove(t+"-enter-active"),n.classList.remove(t+"-enter-to")};this.nextFrame(()=>{n.classList.remove(t+"-enter"),n.classList.add(t+"-enter-to"),de(n,s)})},ne.utils.transitionRemove=function(e,t,n){const o=e.elm;o.setAttribute("data-owl-key",e.key),o.classList.add(t+"-leave"),o.classList.add(t+"-leave-active");const s=()=>{o.classList.contains(t+"-leave-active")&&(o.classList.remove(t+"-leave-active"),o.classList.remove(t+"-leave-to"),n())};this.nextFrame(()=>{o.classList.remove(t+"-leave"),o.classList.add(t+"-leave-to"),de(o,s)})},ne.addDirective({name:"transition",priority:96,atNodeCreation({ctx:e,value:t,addNodeHook:n}){if(!ne.enableTransitions)return;e.rootContext.shouldDefineUtils=!0;const o={insert:`utils.transitionInsert(vn, '${t}');`,remove:`utils.transitionRemove(vn, '${t}', rm);`};for(let e in o)n(e,o[e])}}),ne.addDirective({name:"slot",priority:80,atNodeEncounter({ctx:e,value:t,node:n,qweb:o}){const s=e.generateID(),i=t.match(u)?e.interpolate(t):`'${t}'`;e.addLine(`const slot${s} = this.constructor.slots[context.__owl__.slotId + '_' + ${i}];`),e.addIf(`slot${s}`);let r=`c${e.parentNode}`;if(e.parentNode||(e.rootContext.shouldDefineResult=!0,e.rootContext.shouldDefineUtils=!0,r=`children${e.generateID()}`,e.addLine(`let ${r}= []`),e.addLine("result = {}")),e.addLine(`slot${s}.call(this, context.__owl__.scope, Object.assign({}, extra, {parentNode: ${r}, parent: extra.parent || context}));`),e.parentNode||e.addLine(`utils.defineProxy(result, ${r}[0]);`),n.hasChildNodes()){e.addElse();const t=n.cloneNode(!0);t.removeAttribute("t-slot"),o._compileNode(t,e)}return e.closeIf(),!0}}),ne.utils.toNumber=function(e){const t=parseFloat(e);return isNaN(t)?e:t};const ue=/\.[\w_]+\s*$/,he=/\[[^\[]+\]\s*$/;ne.addDirective({name:"model",priority:42,atNodeCreation({ctx:e,nodeID:t,value:n,node:o,fullName:s,addNodeHook:i}){const r=o.getAttribute("type");let a,l,c,d=s.includes(".lazy")?"change":"input";if(ue.test(n)){const o=n.lastIndexOf(".");c=n.slice(0,o),e.addLine(`let expr${t} = ${e.formatExpression(c)};`),l=`expr${t}${n.slice(o)}`}else{if(!he.test(n))throw new Error(`Invalid t-model expression: "${n}" (it should be assignable)`);{const o=n.lastIndexOf("[");c=n.slice(0,o),e.addLine(`let expr${t} = ${e.formatExpression(c)};`);let s=n.trimRight().slice(o+1,-1);e.addLine(`let exprKey${t} = ${e.formatExpression(s)};`),l=`expr${t}[exprKey${t}]`}}const u=e.generateTemplateKey();if("select"===o.tagName)e.addLine(`p${t}.props = {value: ${l}};`),i("create",`n.elm.value=${l};`),d="change",a=`(ev) => {${l} = ev.target.value}`;else if("checkbox"===r)e.addLine(`p${t}.props = {checked: ${l}};`),a=`(ev) => {${l} = ev.target.checked}`;else if("radio"===r){const n=o.getAttribute("value");e.addLine(`p${t}.props = {checked:${l} === '${n}'};`),a=`(ev) => {${l} = ev.target.value}`,d="click"}else{e.addLine(`p${t}.props = {value: ${l}};`);let n=`ev.target.value${s.includes(".trim")?".trim()":""}`;s.includes(".number")&&(e.rootContext.shouldDefineUtils=!0,n=`utils.toNumber(${n})`),a=`(ev) => {${l} = ${n}}`}e.addLine(`extra.handlers[${u}] = extra.handlers[${u}] || (${a});`),e.addLine(`p${t}.on['${d}'] = extra.handlers[${u}];`)}}),ne.addDirective({name:"key",priority:45,atNodeEncounter({ctx:e,value:t,node:n}){0===e.loopNumber&&(e.keyStack.push(e.rootContext.hasKey0),e.rootContext.hasKey0=!0),e.addLine("{"),e.indent(),e.addLine(`let key${e.loopNumber} = ${e.formatExpression(t)};`)},finalize({ctx:e}){e.dedent(),e.addLine("}"),0===e.loopNumber&&(e.rootContext.hasKey0=e.keyStack.pop())}});const pe={};Object.defineProperty(pe,"mode",{get:()=>ne.dev?"dev":"prod",set(e){if(ne.dev="dev"===e,ne.dev){const e="https://github.com/odoo/owl/blob/master/doc/reference/config.md#mode";console.warn(`Owl is running in 'dev' mode.  This is not suitable for production use. See ${e} for more information.`)}else console.log("Owl is now running in 'prod' mode.")}}),Object.defineProperty(pe,"enableTransitions",{get:()=>ne.enableTransitions,set(e){ne.enableTransitions=e}});class fe extends CustomEvent{constructor(e,t,n){super(t,n),this.originalComponent=e}}const me=Object.assign({},re,{self:"if (e.target !== vn.elm) {return}"});ne.utils.defineProxy=function(e,t){for(let n in t)Object.defineProperty(e,n,{get:()=>t[n],set(e){t[n]=e}})},ne.utils.assignHooks=function(e,t){if("hook"in e){const n=e.hook;for(let e in t){const o=n[e],s=t[e];n[e]=o?(...e)=>{o(...e),s(...e)}:s}}else e.hook=t},ne.addDirective({name:"component",extraNames:["props"],priority:100,atNodeEncounter({ctx:e,value:t,node:n,qweb:o}){e.addLine(`// Component '${t}'`),e.rootContext.shouldDefineQWeb=!0,e.rootContext.shouldDefineParent=!0,e.rootContext.shouldDefineUtils=!0,e.rootContext.shouldDefineScope=!0;let s=!!n.getAttribute("t-props");const i=[];let r="";const a=n.attributes,l={};for(let t=0;t<a.length;t++){const n=a[t].name,o=a[t].textContent;n.startsWith("t-on-")?i.push([n,o]):"t-transition"===n?ne.enableTransitions&&(r=o):n.startsWith("t-")||"class"!==n&&"style"!==n&&(l[n]=e.formatExpression(o)||"undefined")}let c=Object.keys(l).map(e=>e+":"+l[e]).join(","),d=e.generateID();const h=e.generateTemplateKey();let p=n.getAttribute("t-ref"),f="",m="";p&&(e.rootContext.shouldDefineRefs=!0,m=`ref${e.generateID()}`,e.addLine(`const ${m} = ${e.interpolate(p)};`),f=`context.__owl__.refs[${m}] = w${d};`);let g=`w${d}.destroy();`;p&&(g+=`delete context.__owl__.refs[${m}];`),r&&(g=`let finalize = () => {\n          ${g}\n        };\n        delete w${d}.__owl__.transitionInserted;\n        utils.transitionRemove(vn, '${r}', finalize);`);let v="",_=n.getAttribute("class"),w=n.getAttribute("t-att-class"),b=n.getAttribute("style"),y=n.getAttribute("t-att-style");if(y){const t=`_${e.generateID()}`;e.addLine(`const ${t} = ${e.formatExpression(y)};`),y=t}let $="";if(_||w||b||y||i.length){if(_){let t=_.trim().split(/\s+/).map(e=>`'${e}':true`).join(",");$=`_${e.generateID()}`,e.addLine(`let ${$} = {${t}};`)}if(w){let t=e.formatExpression(w);"{"===t[0]&&"}"===t[t.length-1]||(t=`utils.toObj(${t})`),_?e.addLine(`Object.assign(${$}, ${t})`):($=`_${e.generateID()}`,e.addLine(`let ${$} = ${t};`))}const t=y||!!b&&`'${b}'`;v=`utils.assignHooks(vnode.data, {create(_, vn){${t?`vn.elm.style = ${t};`:""}${i.map(function([t,n]){const o=t.match(/\.capture/);t=o?t.replace(/\.capture/,""):t;const{event:s,handler:i}=le(e,t,n,!1,me);return o?`vn.elm.addEventListener('${s}', ${i}, true);`:`vn.elm.addEventListener('${s}', ${i});`}).join("")}}});`}e.addLine(`let w${d} = ${h} in parent.__owl__.cmap ? parent.__owl__.children[parent.__owl__.cmap[${h}]] : false;`);let x=!e.parentNode;if(x){let t=e.generateID();e.rootContext.rootNode=t,x=!0,e.rootContext.shouldDefineResult=!0,e.addLine(`let vn${t} = {};`),e.addLine(`result = vn${t};`)}if(s){const t=e.formatExpression(n.getAttribute("t-props"));e.addLine(`let props${d} = Object.assign({${c}}, ${t});`)}else e.addLine(`let props${d} = {${c}};`);e.addIf(`w${d} && w${d}.__owl__.currentFiber && !w${d}.__owl__.vnode`),e.addLine(`w${d}.destroy();`),e.addLine(`w${d} = false;`),e.closeIf();let C="";x&&(C=`utils.defineProxy(vn${e.rootNode}, pvnode);`);const E=n.childNodes.length;let L=E?"Object.assign(Object.create(context), scope)":"undefined";e.addIf(`w${d}`);let N="";y&&(N=`.then(()=>{if (w${d}.__owl__.status === 5) {return};w${d}.el.style=${y};});`),e.addLine(`w${d}.__updateProps(props${d}, extra.fiber, ${L})${N};`),e.addLine(`let pvnode = w${d}.__owl__.pvnode;`),C&&e.addLine(C),e.parentNode&&e.addLine(`c${e.parentNode}.push(pvnode);`),e.addElse();let k="";t.match(u)||(k=`|| ${e.formatExpression(t)}`);const I=e.interpolate(t);if(e.addLine(`let componentKey${d} = ${I};`),e.addLine(`let W${d} = context.constructor.components[componentKey${d}] || QWeb.components[componentKey${d}]${k};`),e.addLine(`if (!W${d}) {throw new Error('Cannot find the definition of component "' + componentKey${d} + '"')}`),e.addLine(`w${d} = new W${d}(parent, props${d});`),r&&(e.addLine(`const __patch${d} = w${d}.__patch;`),e.addLine(`w${d}.__patch = (t, vn) => {__patch${d}.call(w${d}, t, vn); if(!w${d}.__owl__.transitionInserted){w${d}.__owl__.transitionInserted = true;utils.transitionInsert(w${d}.__owl__.vnode, '${r}');}};`)),e.addLine(`parent.__owl__.cmap[${h}] = w${d}.__owl__.id;`),E){const t=n.cloneNode(!0);for(let e of t.children)e.hasAttribute("t-set")&&e.hasChildNodes()&&(e.setAttribute("t-set-slot",e.getAttribute("t-set")),e.removeAttribute("t-set"));const s=Array.from(t.querySelectorAll("[t-set-slot]")),i=new Set,r=ne.nextSlotId++;if(e.addLine(`w${d}.__owl__.slotId = ${r};`),s.length)for(let e=0,n=s.length;e<n;e++){const n=s[e];let a=n.parentElement,l=!1;for(;a!==t;){if(a.hasAttribute("t-component")||a.tagName[0]===a.tagName[0].toUpperCase()){l=!0;break}a=a.parentElement}if(l)continue;let c=n.getAttribute("t-set-slot");if(i.has(c))continue;i.add(c),n.removeAttribute("t-set-slot"),n.parentElement.removeChild(n);const d=o._compile(`slot_${c}_template`,{elem:n,hasParent:!0});ne.slots[`${r}_${c}`]=d}if(t.childNodes.length){const e=t.ownerDocument.createElement("t");for(let n of Object.values(t.childNodes))e.appendChild(n);const n=o._compile("slot_default_template",{elem:e,hasParent:!0});ne.slots[`${r}_default`]=n}}e.addLine(`let fiber = w${d}.__prepare(extra.fiber, ${L}, () => { const vnode = fiber.vnode; pvnode.sel = vnode.sel; ${v}});`);const S=f?`insert(vn) {${f}},`:"";return e.addLine(`let pvnode = h('dummy', {key: ${h}, hook: {${S}remove() {},destroy(vn) {${g}}}});`),C&&e.addLine(C),e.parentNode&&e.addLine(`c${e.parentNode}.push(pvnode);`),e.addLine(`w${d}.__owl__.pvnode = pvnode;`),e.closeIf(),$&&e.addLine(`w${d}.__owl__.classObj=${$};`),e.addLine(`w${d}.__owl__.parentLastFiberId = extra.fiber.id;`),!0}});const ge=new class{constructor(e){this.tasks=[],this.isRunning=!1,this.requestAnimationFrame=e}start(){this.isRunning=!0,this.scheduleTasks()}stop(){this.isRunning=!1}addFiber(e){return e=e.root,new Promise((t,n)=>{if(e.error)return n(e.error);this.tasks.push({fiber:e,callback:()=>{if(e.error)return n(e.error);t()}}),this.isRunning||this.start()})}rejectFiber(e,t){e=e.root;const n=this.tasks.findIndex(t=>t.fiber===e);if(n>=0){const[o]=this.tasks.splice(n,1);e.cancel(),e.error=new Error(t),o.callback()}}flush(){let e=this.tasks;this.tasks=[],e=e.filter(e=>{if(e.fiber.isCompleted)return e.callback(),!1;if(0===e.fiber.counter){if(!e.fiber.error)try{e.fiber.complete()}catch(t){e.fiber.handleError(t)}return e.callback(),!1}return!0}),this.tasks=e.concat(this.tasks),0===this.tasks.length&&this.stop()}scheduleTasks(){this.requestAnimationFrame(()=>{this.flush(),this.isRunning&&this.scheduleTasks()})}}(B.requestAnimationFrame);class ve{constructor(e,t,n,o,s){this.id=ve.nextId++,this.isCompleted=!1,this.shouldPatch=!0,this.isRendered=!1,this.counter=0,this.vnode=null,this.child=null,this.sibling=null,this.lastChild=null,this.parent=null,this.component=t,this.force=n,this.target=o,this.position=s;const i=t.__owl__;this.scope=i.scope,this.root=e?e.root:this,this.parent=e;let r=i.currentFiber;if(r&&!r.isCompleted){if(this.force=!0,r.root===r&&!e)return this._reuseFiber(r),r;this._remapFiber(r)}this.root.counter++,i.currentFiber=this}_reuseFiber(e){e.cancel(),e.target=this.target||e.target,e.position=this.position||e.position,e.isCompleted=!1,e.isRendered=!1,e.child&&(e.child.parent=null,e.child=null,e.lastChild=null),e.counter=1,e.id=ve.nextId++}_remapFiber(e){if(e.cancel(),this.shouldPatch=e.shouldPatch,e===e.root&&e.counter++,e.parent&&!this.parent)if(this.parent=e.parent,this.root=this.parent.root,this.sibling=e.sibling,this.parent.lastChild===e&&(this.parent.lastChild=this),this.parent.child===e)this.parent.child=this;else{let t=this.parent.child;for(;;){if(t.sibling===e){t.sibling=this;break}t=t.sibling}}}_walk(e){let t=this,n=this;for(;;){const o=e(n);if(o)n=o;else{if(n===t)return;for(;!n.sibling;){if(!n.parent||n.parent===t)return;n=n.parent}n=n.sibling}}}complete(){let e=this.component;this.isCompleted=!0;const t=e.__owl__.status;if(5===t)return;const n=[];this._walk(function(e){return n.push(e),e.child});const o=n.length;if(3===t)for(let t=0;t<o;t++){const o=n[t];o.shouldPatch&&((e=o.component).__owl__.willPatchCB&&e.__owl__.willPatchCB(),e.willPatch())}for(let t=o-1;t>=0;t--){const o=n[t];if(e=o.component,o.target&&0===t){let t;if("self"===o.position){if((t=o.target).tagName.toLowerCase()!==o.vnode.sel)throw new Error(`Cannot attach '${e.constructor.name}' to target node (not same tag name)`);const n=o.vnode.data?{key:o.vnode.data.key}:{},s=j(o.vnode.sel,n);s.elm=t,t=s}else t=e.__owl__.vnode||document.createElement(o.vnode.sel);e.__patch(t,o.vnode)}else o.shouldPatch?(e.__patch(e.__owl__.vnode,o.vnode),e.__owl__.pvnode&&(e.__owl__.pvnode.elm=e.__owl__.vnode.elm)):(e.__patch(document.createElement(o.vnode.sel),o.vnode),e.__owl__.pvnode.elm=e.__owl__.vnode.elm);const s=e.__owl__;o===s.currentFiber&&(s.currentFiber=null)}let s=!1;if(this.target){switch(this.position){case"first-child":this.target.prepend(this.component.el);break;case"last-child":this.target.appendChild(this.component.el)}s=document.body.contains(this.component.el),this.component.env.qweb.trigger("dom-appended")}if(3===t||s)for(let t=o-1;t>=0;t--){const o=n[t];e=o.component,o.shouldPatch&&!this.target?(e.patched(),e.__owl__.patchedCB&&e.__owl__.patchedCB()):e.__callMounted()}else for(let t=o-1;t>=0;t--){(e=n[t].component).__owl__.status=4}}cancel(){this._walk(e=>(e.isRendered||e.root.counter--,e.isCompleted=!0,e.child))}handleError(e){let t=this.component;this.vnode=t.__owl__.vnode||j("div");const n=t.env.qweb;let o=t,s=!1;for(;t&&!(s=!!t.catchError);)o=t,t=t.__owl__.parent;n.trigger("error",e),s?t.catchError(e):(this.root.counter=0,this.root.error=e,ge.flush(),o.destroy())}}function _e(e,t){if(!0===t)return!0;if("function"==typeof t)return"object"==typeof e?e instanceof t:typeof e===t.name.toLowerCase();if(t instanceof Array){let n=!1;for(let o=0,s=t.length;o<s;o++)n=n||_e(e,t[o]);return n}if(t.optional&&void 0===e)return!0;let n=!t.type||_e(e,t.type);if(t.validate&&(n=n&&t.validate(e)),t.type===Array&&t.element)for(let o=0,s=e.length;o<s;o++)n=n&&_e(e[o],t.element);if(t.type===Object&&t.shape){const o=t.shape;for(let t in o)n=n&&_e(e[t],o[t]);if(n)for(let t in e)if(!(t in o))throw new Error(`unknown prop '${t}'`)}return n}ve.nextId=1,ne.utils.validateProps=function(e,t){const n=e.props;if(n instanceof Array){for(let o=0,s=n.length;o<s;o++){const s=n[o];if("?"===s[s.length-1])break;if(!(s in t))throw new Error(`Missing props '${n[o]}' (component '${e.name}')`)}for(let o in t)if(!n.includes(o)&&!n.includes(o+"?"))throw new Error(`Unknown prop '${o}' given to component '${e.name}'`)}else if(n){for(let o in n){if(void 0===t[o]){if(n[o]&&!n[o].optional)throw new Error(`Missing props '${o}' (component '${e.name}')`);continue}let s;try{s=_e(t[o],n[o])}catch(t){throw t.message=`Invalid prop '${o}' in component ${e.name} (${t.message})`,t}if(!s)throw new Error(`Invalid Prop '${o}' in component '${e.name}'`)}for(let o in t)if(!(o in n))throw new Error(`Unknown prop '${o}' given to component '${e.name}'`)}};const we={};function be(e){const t=e.split(/(\{|\}|;)/).map(e=>e.trim()),n=[],o=[];let s=[];function i(){s.length&&(o.push(function e(t,o){const s=[];for(const i of n[t]){let r=o&&o+" "+i||i;r.includes("&")&&(r=i.replace(/&/g,o||"")),t<n.length-1&&(r=e(t+1,r)),s.push(r)}return s.join(", ")}(0)+" {"),o.push(...s),o.push("}"),s=[])}for(;t.length;){let e=t.shift();"}"===e?(i(),n.pop()):("{"===t[0]&&(i(),n.push(e.split(/\s*,\s*/)),t.shift()),";"===t[0]&&s.push("  "+e+";"))}return o.join("\n")}function ye(e,t){const n=we[e];if(!n)throw new Error(`Invalid css stylesheet for component '${t}'. Did you forget to use the 'css' tag helper?`);n.setAttribute("component",t),document.head.appendChild(n)}var $e;!function(e){e[e.CREATED=0]="CREATED",e[e.WILLSTARTED=1]="WILLSTARTED",e[e.RENDERED=2]="RENDERED",e[e.MOUNTED=3]="MOUNTED",e[e.UNMOUNTED=4]="UNMOUNTED",e[e.DESTROYED=5]="DESTROYED"}($e||($e={}));const xe=Symbol("portal");let Ce=1;class Ee{constructor(e,t){Ee.current=this;let n=this.constructor;const o=n.defaultProps;o&&(t=t||{},this.__applyDefaultProps(t,o)),this.props=t,ne.dev&&ne.utils.validateProps(n,this.props);const s=Ce++;let i;if(e){this.env=e.env;const t=e.__owl__;t.children[s]=this,i=t.depth+1}else this.env=this.constructor.env,this.env.qweb||(this.env.qweb=new ne),this.env.browser||(this.env.browser=B),this.env.qweb.on("update",this,()=>{switch(this.__owl__.status){case 3:this.render(!0);break;case 5:this.env.qweb.off("update",this)}}),i=0;const r=this.env.qweb,a=n.template||this.__getTemplate(r);this.__owl__={id:s,depth:i,vnode:null,pvnode:null,status:0,parent:e||null,children:{},cmap:{},currentFiber:null,parentLastFiberId:0,boundHandlers:{},mountedCB:null,willUnmountCB:null,willPatchCB:null,patchedCB:null,willStartCB:null,willUpdatePropsCB:null,observer:null,renderFn:r.render.bind(r,a),classObj:null,refs:null,scope:null},n.style&&this.__applyStyles(n),this.setup()}get el(){return this.__owl__.vnode?this.__owl__.vnode.elm:null}setup(){}async willStart(){}mounted(){}async willUpdateProps(e){}willPatch(){}patched(){}willUnmount(){}async mount(e,t={}){if(!(e instanceof HTMLElement||e instanceof DocumentFragment)){let e=`Component '${this.constructor.name}' cannot be mounted: the target is not a valid DOM node.`;throw new Error(e+="\nMaybe the DOM is not ready yet? (in that case, you can use owl.utils.whenReady)")}const n=t.position||"last-child",o=this.__owl__,s=o.currentFiber;switch(o.status){case 0:{const t=new ve(null,this,!0,e,n);return t.shouldPatch=!1,this.__prepareAndRender(t,()=>{}),ge.addFiber(t)}case 1:case 2:return s.target=e,s.position=n,ge.addFiber(s);case 4:{const t=new ve(null,this,!0,e,n);return t.shouldPatch=!1,this.__render(t),ge.addFiber(t)}case 3:if("self"!==n&&this.el.parentNode!==e){const t=new ve(null,this,!0,e,n);return t.shouldPatch=!1,this.__render(t),ge.addFiber(t)}return Promise.resolve();case 5:throw new Error("Cannot mount a destroyed component")}}unmount(){3===this.__owl__.status&&(this.__callWillUnmount(),this.el.remove())}async render(e=!1){const t=this.__owl__,n=t.currentFiber;if(!t.vnode&&!n)return;if(n&&!n.isRendered&&!n.isCompleted)return ge.addFiber(n.root);const o=t.status,s=new ve(null,this,e,null,null);return Promise.resolve().then(()=>{if(3===t.status||3!==o){if(s.isCompleted||s.isRendered)return;this.__render(s)}else s.isCompleted=!0,t.currentFiber=null}),ge.addFiber(s)}destroy(){const e=this.__owl__;if(5!==e.status){const t=this.el;this.__destroy(e.parent),t&&t.remove()}}shouldUpdate(e){return!0}trigger(e,t){this.__trigger(this,e,t)}__destroy(e){const t=this.__owl__;3===t.status&&(t.willUnmountCB&&t.willUnmountCB(),this.willUnmount(),t.status=4);const n=t.children;for(let e in n)n[e].__destroy(this);if(e){let n=t.id;delete e.__owl__.children[n],t.parent=null}t.status=5,delete t.vnode,t.currentFiber&&(t.currentFiber.isCompleted=!0)}__callMounted(){const e=this.__owl__;e.status=3,e.currentFiber=null,this.mounted(),e.mountedCB&&e.mountedCB()}__callWillUnmount(){const e=this.__owl__;e.willUnmountCB&&e.willUnmountCB(),this.willUnmount(),e.status=4,e.currentFiber&&(e.currentFiber.isCompleted=!0,e.currentFiber.root.counter=0);const t=e.children;for(let e in t){const n=t[e];3===n.__owl__.status&&n.__callWillUnmount()}}__trigger(e,t,n){if(this.el){const o=new fe(e,t,{bubbles:!0,cancelable:!0,detail:n}),s=this.env[xe];s&&s(o),this.el.dispatchEvent(o)}}async __updateProps(e,t,n){if(this.__owl__.scope=n,t.force||this.shouldUpdate(e)){const n=this.__owl__,o=new ve(t,this,t.force,null,null);t.child?t.lastChild.sibling=o:t.child=o,t.lastChild=o;const s=this.constructor.defaultProps;if(s&&this.__applyDefaultProps(e,s),ne.dev&&ne.utils.validateProps(this.constructor,e),await Promise.all([this.willUpdateProps(e),n.willUpdatePropsCB&&n.willUpdatePropsCB(e)]),o.isCompleted)return;this.props=e,this.__render(o)}}__patch(e,t){this.__owl__.vnode=U(e,t)}__prepare(e,t,n){this.__owl__.scope=t;const o=new ve(e,this,e.force,null,null);return o.shouldPatch=!1,e.child?e.lastChild.sibling=o:e.child=o,e.lastChild=o,this.__prepareAndRender(o,n),o}__applyStyles(e){for(;e&&e.style;)e.hasOwnProperty("style")&&(ye(e.style,e.name),delete e.style),e=e.__proto__}__getTemplate(e){let t=this.constructor;if(!t.hasOwnProperty("_template")){let n=t.name;for(;!(n in e.templates)&&t!==Ee;)n=(t=t.__proto__).name;if(t===Ee)throw new Error(`Could not find template for component "${this.constructor.name}"`);t._template=n}return t._template}async __prepareAndRender(e,t){try{const t=Promise.all([this.willStart(),this.__owl__.willStartCB&&this.__owl__.willStartCB()]);if(this.__owl__.status=1,await t,5===this.__owl__.status)return Promise.resolve()}catch(t){return e.handleError(t),Promise.resolve()}e.isCompleted||(this.__render(e),this.__owl__.status=2,t())}__render(e){const t=this.__owl__;let n;t.observer&&(t.observer.allowMutations=!1);try{let o=t.renderFn(this,{handlers:t.boundHandlers,fiber:e});for(let n in t.children){const o=t.children[n],s=o.__owl__;3!==s.status&&s.parentLastFiberId<e.id&&(o.__destroy(s.parent),s.pvnode&&(delete s.pvnode.key,delete s.pvnode.data.hook.remove))}if(!o)throw new Error(`Rendering '${this.constructor.name}' did not return anything`);if(e.vnode=o,t.classObj){const e=o.data;e.class=Object.assign(e.class||{},t.classObj)}}catch(e){n=e}t.observer&&(t.observer.allowMutations=!0),e.root.counter--,e.isRendered=!0,n&&e.handleError(n)}__applyDefaultProps(e,t){for(let n in t)void 0===e[n]&&(e[n]=t[n])}}Ee.template=null,Ee._template=null,Ee.current=null,Ee.components={},Ee.env={},Ee.scheduler=ge;class Le extends o{constructor(e={}){super(),this.rev=1,this.mapping={},this.observer=new s,this.observer.notifyCB=(()=>{let e=this.rev;return Promise.resolve().then(()=>{e===this.rev&&this.__notifyComponents()})}),this.state=this.observer.observe(e),this.subscriptions.update=[]}async __notifyComponents(){const e=++this.rev,t=function(e,t){let n,o=!1;return e.reduce((e,s)=>{let i=t(s);return o&&(i===n?o.push(s):o=!1),o||(o=[s],e.push(o)),n=i,e},[])}(this.subscriptions.update,e=>e.owner?e.owner.__owl__.depth:-1);for(let n of t){const t=n.map(t=>t.callback.call(t.owner,e));ge.flush(),await Promise.all(t)}}}function Ne(e,t,n){const o=t.__owl__,i=o.id,r=e.mapping;if(i in r)return e.state;o.observer||(o.observer=new s,o.observer.notifyCB=t.render.bind(t)),r[i]=0;const a=o.renderFn;o.renderFn=function(t,n){return r[i]=e.rev,a(t,n)},e.on("update",t,async e=>{r[i]<e&&(r[i]=e,await n())});const l=t.__destroy;return t.__destroy=(n=>{e.off("update",t),delete r[i],l.call(t,n)}),e.state}function ke(e){const t=Ee.current,n=t.__owl__;return n.observer||(n.observer=new s,n.observer.notifyCB=t.render.bind(t)),n.observer.observe(e)}function Ie(e,t=!1){return t?function(t){const n=Ee.current;if(n.__owl__[e]){const o=n.__owl__[e];n.__owl__[e]=function(){o.call(n),t.call(n)}}else n.__owl__[e]=t}:function(t){const n=Ee.current;if(n.__owl__[e]){const o=n.__owl__[e];n.__owl__[e]=function(){t.call(n),o.call(n)}}else n.__owl__[e]=t}}function Se(e){return function(t){const n=Ee.current;if(n.__owl__[e]){const o=n.__owl__[e];n.__owl__[e]=function(...e){return Promise.all([o.call(n,...e),t.call(n,...e)])}}else n.__owl__[e]=t}}const De=Ie("mountedCB",!0),Ae=Ie("willUnmountCB"),Pe=Ie("willPatchCB"),Te=Ie("patchedCB",!0),Re=Se("willStartCB"),Me=Se("willUpdatePropsCB");function Oe(e){const t=Ee.current;t.env=Object.assign(Object.create(t.env),e)}var je=Object.freeze({__proto__:null,useState:ke,onMounted:De,onWillUnmount:Ae,onWillPatch:Pe,onPatched:Te,onWillStart:Re,onWillUpdateProps:Me,useRef:function(e){const t=Ee.current.__owl__;return{get el(){const n=t.refs&&t.refs[e];return n instanceof HTMLElement?n:n instanceof Ee?n.el:null},get comp(){const n=t.refs&&t.refs[e];return n instanceof Ee?n:null}}},useComponent:function(){return Ee.current},useEnv:function(){return Ee.current.env},useSubEnv:Oe,useExternalListener:function(e,t,n,o){const s=n.bind(Ee.current);De(()=>e.addEventListener(t,s,o)),Ae(()=>e.removeEventListener(t,s,o))}});class Ue extends Le{constructor(e){if(super(e.state),this.actions=e.actions,this.env=e.env,this.getters={},this.updateFunctions=[],e.getters){const t={state:this.state,getters:this.getters};for(let n in e.getters)this.getters[n]=e.getters[n].bind(this,t)}}dispatch(e,...t){if(!this.actions[e])throw new Error(`[Error] action ${e} is undefined`);return this.actions[e]({dispatch:this.dispatch.bind(this),env:this.env,state:this.state,getters:this.getters},...t)}__notifyComponents(){return this.trigger("before-update"),super.__notifyComponents()}}const Fe=(e,t)=>e===t;function Be(e,...t){const n=`__template__${ne.nextId++}`,o=String.raw(e,...t);return ne.registerTemplate(n,o),n}var qe=Object.freeze({__proto__:null,xml:Be,css:function(e,...t){const n=`__sheet__${ne.nextId++}`;return function(e,t){const n=document.createElement("style");n.innerHTML=be(t),we[e]=n}(n,String.raw(e,...t)),n}});class Ke extends Ee{async __updateProps(e,t){this.render(t.force)}}Ke.template=Be`<t t-slot="default"/>`;class We extends Ee{constructor(e,t){super(e,t),this.doTargetLookUp=!0,this._handledEvents=new Set,this._handlerTunnel=(e=>{e.stopPropagation(),this.__trigger(e.originalComponent,e.type,e.detail)}),this.parentEnv=null,this.portal=null,this.target=null,this.parentEnv=e?e.env:{},Oe({[xe]:e=>{this._handledEvents.has(e.type)||(this.portal.elm.addEventListener(e.type,this._handlerTunnel),this._handledEvents.add(e.type))}})}__callWillUnmount(){super.__callWillUnmount(),this.el.appendChild(this.portal.elm),this.doTargetLookUp=!0}__checkVNodeStructure(e){const t=e.children;let n=0;for(let e of t)e.sel&&n++;if(1!==n)throw new Error(`Portal must have exactly one non-text child (has ${n})`)}__checkTargetPresence(){if(!this.target||!document.contains(this.target))throw new Error(`Could not find any match for "${this.props.target}"`)}__deployPortal(){this.__checkTargetPresence(),this.target.appendChild(this.portal.elm)}__destroy(e){if(this.portal&&this.portal.elm){const e=this.portal.elm,t=e.parentNode;t&&t.removeChild(e)}super.__destroy(e)}__patch(e,t){if(this.doTargetLookUp){const e=document.querySelector(this.props.target);e?(this.doTargetLookUp=!1,this.target=e):this.env.qweb.on("dom-appended",this,()=>{this.doTargetLookUp=!1,this.env.qweb.off("dom-appended",this),this.target=document.querySelector(this.props.target),this.__deployPortal()})}this.__checkVNodeStructure(t);const n=(!this.portal||this.el.contains(this.portal.elm))&&!this.doTargetLookUp;this.doTargetLookUp||n||this.__checkTargetPresence();const o=this.portal?this.portal:document.createElement(t.children[0].sel);this.portal=U(o,t.children[0]),t.children=[],super.__patch(e,t),n&&this.__deployPortal()}__trigger(e,t,n){const o=this.env;this.env=this.parentEnv,super.__trigger(e,t,n),this.env=o}}We.template=Be`<portal><t t-slot="default"/></portal>`,We.props={target:{type:String}};class ze extends Ee{constructor(){super(...arguments),this.href=this.env.router.destToPath(this.props)}async willUpdateProps(e){this.href=this.env.router.destToPath(e)}get isActive(){return"hash"===this.env.router.mode?document.location.hash===this.href:document.location.pathname===this.href}navigate(e){if(!(e.metaKey||e.altKey||e.ctrlKey||e.shiftKey||void 0!==e.button&&0!==e.button)){if(e.currentTarget&&e.currentTarget.getAttribute){const t=e.currentTarget.getAttribute("target");if(/\b_blank\b/i.test(t))return}e.preventDefault(),this.env.router.navigate(this.props)}}}ze.template=Be`
+  `;
+},{"../../package.min.json":10,"@odoo/owl":11}],9:[function(require,module,exports){
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.rgbToHex = exports.range = exports.log = exports.ipcRendererLog = exports.ipcMainLog = exports.getGoogleImageUrl = exports.floodFillPixels = exports.drawDot = exports.ajax = void 0;
+function ajax(url, options = {}) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            var _a, _b;
+            const xhr = new XMLHttpRequest();
+            xhr.responseType = (_a = options.type) !== null && _a !== void 0 ? _a : "json";
+            xhr.onload = () => resolve(xhr);
+            xhr.onerror = () => reject(xhr);
+            xhr.open((_b = options.method) !== null && _b !== void 0 ? _b : "GET", url);
+            xhr.send();
+        });
+    });
+}
+exports.ajax = ajax;
+function drawDot(pixels, width, [ox, oy], r) {
+    for (let y = -r; y < r; y++) {
+        let height = Math.sqrt(r * r - y * y);
+        for (let x = Math.round(-height); x < height; x++) {
+            const n = (oy + y) * width * 4 + (ox + x) * 4;
+            pixels[n] = 255;
+            pixels[n + 1] = 0;
+            pixels[n + 2] = 0;
+            pixels[n + 3] = 255;
+        }
+    }
+}
+exports.drawDot = drawDot;
+function floodFillPixels(pixels, width, [x, y], threshold) {
+    const target = y * width * 4 + x * 4;
+    const t = threshold / 2;
+    const [tr, tg, tb] = pixels.slice(target, target + 3);
+    const [trl, trg] = [tr - t, tr + t];
+    const [tbl, tbg] = [tb - t, tb + t];
+    const [tgl, tgg] = [tg - t, tg + t];
+    const q = [target];
+    let count = 0;
+    while (q.length) {
+        const n = q.shift();
+        if (pixels[n + 3] &&
+            pixels[n] > trl &&
+            pixels[n] <= trg &&
+            pixels[n + 1] > tgl &&
+            pixels[n + 1] <= tgg &&
+            pixels[n + 2] > tbl &&
+            pixels[n + 2] <= tbg) {
+            count++;
+            pixels[n + 3] = 0;
+            q.push(n + 4, n - 4, n + width * 4, n - width * 4);
+        }
+    }
+    const hex = rgbToHex(tr, tg, tb);
+    log(`[REMOVED ${count} CONTIGUOUS PIXELS] target: [${x}, ${y}] / color: {{${hex}}}${hex}{{inherit}} / tolerance: ${threshold}`);
+}
+exports.floodFillPixels = floodFillPixels;
+function getGoogleImageUrl(query) {
+    const formatted = query.replace(/\s+/g, "+");
+    return `https://www.google.com/search?q=${formatted}&tbm=isch`;
+}
+exports.getGoogleImageUrl = getGoogleImageUrl;
+function ipcMainLog(...message) {
+    log(`{{#6610f2}}[IPC-MAIN]{{inherit}}`, ...message);
+}
+exports.ipcMainLog = ipcMainLog;
+function ipcRendererLog(...message) {
+    log(`{{#007bff}}[IPC-RENDERER]{{inherit}}`, ...message);
+}
+exports.ipcRendererLog = ipcRendererLog;
+function log(...message) {
+    const styles = [];
+    const msg = message
+        .join(" ")
+        .replace(/\{\{([\w\s#\(\),)]+)\}\}/g, (_, color) => {
+        styles.push(`color:${color}`);
+        return "%c";
+    });
+    console.log(msg, ...styles);
+}
+exports.log = log;
+function range(n) {
+    return [...new Array(n)].map((_, i) => i);
+}
+exports.range = range;
+function rgbToHex(r, g, b) {
+    return `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`;
+}
+exports.rgbToHex = rgbToHex;
+},{}],10:[function(require,module,exports){
+module.exports={
+    "name": "ishit",
+    "version": "0.0.8"
+}
+
+},{}],11:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+/**
+ * We define here a simple event bus: it can
+ * - emit events
+ * - add/remove listeners.
+ *
+ * This is a useful pattern of communication in many cases.  For OWL, each
+ * components and stores are event buses.
+ */
+//------------------------------------------------------------------------------
+// EventBus
+//------------------------------------------------------------------------------
+class EventBus {
+    constructor() {
+        this.subscriptions = {};
+    }
+    /**
+     * Add a listener for the 'eventType' events.
+     *
+     * Note that the 'owner' of this event can be anything, but will more likely
+     * be a component or a class. The idea is that the callback will be called with
+     * the proper owner bound.
+     *
+     * Also, the owner should be kind of unique. This will be used to remove the
+     * listener.
+     */
+    on(eventType, owner, callback) {
+        if (!callback) {
+            throw new Error("Missing callback");
+        }
+        if (!this.subscriptions[eventType]) {
+            this.subscriptions[eventType] = [];
+        }
+        this.subscriptions[eventType].push({
+            owner,
+            callback,
+        });
+    }
+    /**
+     * Remove a listener
+     */
+    off(eventType, owner) {
+        const subs = this.subscriptions[eventType];
+        if (subs) {
+            this.subscriptions[eventType] = subs.filter((s) => s.owner !== owner);
+        }
+    }
+    /**
+     * Emit an event of type 'eventType'.  Any extra arguments will be passed to
+     * the listeners callback.
+     */
+    trigger(eventType, ...args) {
+        const subs = this.subscriptions[eventType] || [];
+        for (let i = 0, iLen = subs.length; i < iLen; i++) {
+            const sub = subs[i];
+            sub.callback.call(sub.owner, ...args);
+        }
+    }
+    /**
+     * Remove all subscriptions.
+     */
+    clear() {
+        this.subscriptions = {};
+    }
+}
+
+/**
+ * Owl Observer
+ *
+ * This code contains the logic that allows Owl to observe and react to state
+ * changes.
+ *
+ * This is a Observer class that can observe any JS values.  The way it works
+ * can be summarized thusly:
+ * - primitive values are not observed at all
+ * - Objects and arrays are observed by replacing them with a Proxy
+ * - each object/array metadata are tracked in a weakmap, and keep a revision
+ *   number
+ *
+ * Note that this code is loosely inspired by Vue.
+ */
+//------------------------------------------------------------------------------
+// Observer
+//------------------------------------------------------------------------------
+class Observer {
+    constructor() {
+        this.rev = 1;
+        this.allowMutations = true;
+        this.weakMap = new WeakMap();
+    }
+    notifyCB() { }
+    observe(value, parent) {
+        if (value === null ||
+            typeof value !== "object" ||
+            value instanceof Date ||
+            value instanceof Promise) {
+            // fun fact: typeof null === 'object'
+            return value;
+        }
+        let metadata = this.weakMap.get(value) || this._observe(value, parent);
+        return metadata.proxy;
+    }
+    revNumber(value) {
+        const metadata = this.weakMap.get(value);
+        return metadata ? metadata.rev : 0;
+    }
+    _observe(value, parent) {
+        var self = this;
+        const proxy = new Proxy(value, {
+            get(target, k) {
+                const targetValue = target[k];
+                return self.observe(targetValue, value);
+            },
+            set(target, key, newVal) {
+                const value = target[key];
+                if (newVal !== value) {
+                    if (!self.allowMutations) {
+                        throw new Error(`Observed state cannot be changed here! (key: "${key}", val: "${newVal}")`);
+                    }
+                    self._updateRevNumber(target);
+                    target[key] = newVal;
+                    self.notifyCB();
+                }
+                return true;
+            },
+            deleteProperty(target, key) {
+                if (key in target) {
+                    delete target[key];
+                    self._updateRevNumber(target);
+                    self.notifyCB();
+                }
+                return true;
+            },
+        });
+        const metadata = {
+            value,
+            proxy,
+            rev: this.rev,
+            parent,
+        };
+        this.weakMap.set(value, metadata);
+        this.weakMap.set(metadata.proxy, metadata);
+        return metadata;
+    }
+    _updateRevNumber(target) {
+        this.rev++;
+        let metadata = this.weakMap.get(target);
+        let parent = target;
+        do {
+            metadata = this.weakMap.get(parent);
+            metadata.rev++;
+        } while ((parent = metadata.parent) && parent !== target);
+    }
+}
+
+/**
+ * Owl QWeb Expression Parser
+ *
+ * Owl needs in various contexts to be able to understand the structure of a
+ * string representing a javascript expression.  The usual goal is to be able
+ * to rewrite some variables.  For example, if a template has
+ *
+ *  ```xml
+ *  <t t-if="computeSomething({val: state.val})">...</t>
+ * ```
+ *
+ * this needs to be translated in something like this:
+ *
+ * ```js
+ *   if (context["computeSomething"]({val: context["state"].val})) { ... }
+ * ```
+ *
+ * This file contains the implementation of an extremely naive tokenizer/parser
+ * and evaluator for javascript expressions.  The supported grammar is basically
+ * only expressive enough to understand the shape of objects, of arrays, and
+ * various operators.
+ */
+//------------------------------------------------------------------------------
+// Misc types, constants and helpers
+//------------------------------------------------------------------------------
+const RESERVED_WORDS = "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,this,eval,void,Math,RegExp,Array,Object,Date".split(",");
+const WORD_REPLACEMENT = Object.assign(Object.create(null), {
+    and: "&&",
+    or: "||",
+    gt: ">",
+    gte: ">=",
+    lt: "<",
+    lte: "<=",
+});
+const STATIC_TOKEN_MAP = Object.assign(Object.create(null), {
+    "{": "LEFT_BRACE",
+    "}": "RIGHT_BRACE",
+    "[": "LEFT_BRACKET",
+    "]": "RIGHT_BRACKET",
+    ":": "COLON",
+    ",": "COMMA",
+    "(": "LEFT_PAREN",
+    ")": "RIGHT_PAREN",
+});
+// note that the space after typeof is relevant. It makes sure that the formatted
+// expression has a space after typeof
+const OPERATORS = "...,.,===,==,+,!==,!=,!,||,&&,>=,>,<=,<,?,-,*,/,%,typeof ,=>,=,;,in ".split(",");
+let tokenizeString = function (expr) {
+    let s = expr[0];
+    let start = s;
+    if (s !== "'" && s !== '"') {
+        return false;
+    }
+    let i = 1;
+    let cur;
+    while (expr[i] && expr[i] !== start) {
+        cur = expr[i];
+        s += cur;
+        if (cur === "\\") {
+            i++;
+            cur = expr[i];
+            if (!cur) {
+                throw new Error("Invalid expression");
+            }
+            s += cur;
+        }
+        i++;
+    }
+    if (expr[i] !== start) {
+        throw new Error("Invalid expression");
+    }
+    s += start;
+    return { type: "VALUE", value: s };
+};
+let tokenizeNumber = function (expr) {
+    let s = expr[0];
+    if (s && s.match(/[0-9]/)) {
+        let i = 1;
+        while (expr[i] && expr[i].match(/[0-9]|\./)) {
+            s += expr[i];
+            i++;
+        }
+        return { type: "VALUE", value: s };
+    }
+    else {
+        return false;
+    }
+};
+let tokenizeSymbol = function (expr) {
+    let s = expr[0];
+    if (s && s.match(/[a-zA-Z_\$]/)) {
+        let i = 1;
+        while (expr[i] && expr[i].match(/\w/)) {
+            s += expr[i];
+            i++;
+        }
+        if (s in WORD_REPLACEMENT) {
+            return { type: "OPERATOR", value: WORD_REPLACEMENT[s], size: s.length };
+        }
+        return { type: "SYMBOL", value: s };
+    }
+    else {
+        return false;
+    }
+};
+const tokenizeStatic = function (expr) {
+    const char = expr[0];
+    if (char && char in STATIC_TOKEN_MAP) {
+        return { type: STATIC_TOKEN_MAP[char], value: char };
+    }
+    return false;
+};
+const tokenizeOperator = function (expr) {
+    for (let op of OPERATORS) {
+        if (expr.startsWith(op)) {
+            return { type: "OPERATOR", value: op };
+        }
+    }
+    return false;
+};
+const TOKENIZERS = [
+    tokenizeString,
+    tokenizeNumber,
+    tokenizeOperator,
+    tokenizeSymbol,
+    tokenizeStatic,
+];
+/**
+ * Convert a javascript expression (as a string) into a list of tokens. For
+ * example: `tokenize("1 + b")` will return:
+ * ```js
+ *  [
+ *   {type: "VALUE", value: "1"},
+ *   {type: "OPERATOR", value: "+"},
+ *   {type: "SYMBOL", value: "b"}
+ * ]
+ * ```
+ */
+function tokenize(expr) {
+    const result = [];
+    let token = true;
+    while (token) {
+        expr = expr.trim();
+        if (expr) {
+            for (let tokenizer of TOKENIZERS) {
+                token = tokenizer(expr);
+                if (token) {
+                    result.push(token);
+                    expr = expr.slice(token.size || token.value.length);
+                    break;
+                }
+            }
+        }
+        else {
+            token = false;
+        }
+    }
+    if (expr.length) {
+        throw new Error(`Tokenizer error: could not tokenize "${expr}"`);
+    }
+    return result;
+}
+//------------------------------------------------------------------------------
+// Expression "evaluator"
+//------------------------------------------------------------------------------
+/**
+ * This is the main function exported by this file. This is the code that will
+ * process an expression (given as a string) and returns another expression with
+ * proper lookups in the context.
+ *
+ * Usually, this kind of code would be very simple to do if we had an AST (so,
+ * if we had a javascript parser), since then, we would only need to find the
+ * variables and replace them.  However, a parser is more complicated, and there
+ * are no standard builtin parser API.
+ *
+ * Since this method is applied to simple javasript expressions, and the work to
+ * be done is actually quite simple, we actually can get away with not using a
+ * parser, which helps with the code size.
+ *
+ * Here is the heuristic used by this method to determine if a token is a
+ * variable:
+ * - by default, all symbols are considered a variable
+ * - unless the previous token is a dot (in that case, this is a property: `a.b`)
+ * - or if the previous token is a left brace or a comma, and the next token is
+ *   a colon (in that case, this is an object key: `{a: b}`)
+ *
+ * Some specific code is also required to support arrow functions. If we detect
+ * the arrow operator, then we add the current (or some previous tokens) token to
+ * the list of variables so it does not get replaced by a lookup in the context
+ */
+function compileExprToArray(expr, scope) {
+    scope = Object.create(scope);
+    const tokens = tokenize(expr);
+    for (let i = 0; i < tokens.length; i++) {
+        let token = tokens[i];
+        let prevToken = tokens[i - 1];
+        let nextToken = tokens[i + 1];
+        let isVar = token.type === "SYMBOL" && !RESERVED_WORDS.includes(token.value);
+        if (token.type === "SYMBOL" && !RESERVED_WORDS.includes(token.value)) {
+            if (prevToken) {
+                if (prevToken.type === "OPERATOR" && prevToken.value === ".") {
+                    isVar = false;
+                }
+                else if (prevToken.type === "LEFT_BRACE" || prevToken.type === "COMMA") {
+                    if (nextToken && nextToken.type === "COLON") {
+                        isVar = false;
+                    }
+                }
+            }
+        }
+        if (nextToken && nextToken.type === "OPERATOR" && nextToken.value === "=>") {
+            if (token.type === "RIGHT_PAREN") {
+                let j = i - 1;
+                while (j > 0 && tokens[j].type !== "LEFT_PAREN") {
+                    if (tokens[j].type === "SYMBOL" && tokens[j].originalValue) {
+                        tokens[j].value = tokens[j].originalValue;
+                        scope[tokens[j].value] = { id: tokens[j].value, expr: tokens[j].value };
+                    }
+                    j--;
+                }
+            }
+            else {
+                scope[token.value] = { id: token.value, expr: token.value };
+            }
+        }
+        if (isVar) {
+            token.varName = token.value;
+            if (token.value in scope && "id" in scope[token.value]) {
+                token.value = scope[token.value].expr;
+            }
+            else {
+                token.originalValue = token.value;
+                token.value = `scope['${token.value}']`;
+            }
+        }
+    }
+    return tokens;
+}
+function compileExpr(expr, scope) {
+    return compileExprToArray(expr, scope)
+        .map((t) => t.value)
+        .join("");
+}
+
+const INTERP_REGEXP = /\{\{.*?\}\}/g;
+//------------------------------------------------------------------------------
+// Compilation Context
+//------------------------------------------------------------------------------
+class CompilationContext {
+    constructor(name) {
+        this.code = [];
+        this.variables = {};
+        this.escaping = false;
+        this.parentNode = null;
+        this.parentTextNode = null;
+        this.rootNode = null;
+        this.indentLevel = 0;
+        this.shouldDefineParent = false;
+        this.shouldDefineScope = false;
+        this.protectedScopeNumber = 0;
+        this.shouldDefineQWeb = false;
+        this.shouldDefineUtils = false;
+        this.shouldDefineRefs = false;
+        this.shouldDefineResult = true;
+        this.loopNumber = 0;
+        this.inPreTag = false;
+        this.allowMultipleRoots = false;
+        this.hasParentWidget = false;
+        this.hasKey0 = false;
+        this.keyStack = [];
+        this.rootContext = this;
+        this.templateName = name || "noname";
+        this.addLine("let h = this.h;");
+    }
+    generateID() {
+        return CompilationContext.nextID++;
+    }
+    /**
+     * This method generates a "template key", which is basically a unique key
+     * which depends on the currently set keys, and on the iteration numbers (if
+     * we are in a loop).
+     *
+     * Such a key is necessary when we need to associate an id to some element
+     * generated by a template (for example, a component)
+     */
+    generateTemplateKey(prefix = "") {
+        const id = this.generateID();
+        if (this.loopNumber === 0 && !this.hasKey0) {
+            return `'${prefix}__${id}__'`;
+        }
+        let key = `\`${prefix}__${id}__`;
+        let start = this.hasKey0 ? 0 : 1;
+        for (let i = start; i < this.loopNumber + 1; i++) {
+            key += `\${key${i}}__`;
+        }
+        this.addLine(`let k${id} = ${key}\`;`);
+        return `k${id}`;
+    }
+    generateCode() {
+        if (this.shouldDefineResult) {
+            this.code.unshift("    let result;");
+        }
+        if (this.shouldDefineScope) {
+            this.code.unshift("    let scope = Object.create(context);");
+        }
+        if (this.shouldDefineRefs) {
+            this.code.unshift("    context.__owl__.refs = context.__owl__.refs || {};");
+        }
+        if (this.shouldDefineParent) {
+            if (this.hasParentWidget) {
+                this.code.unshift("    let parent = extra.parent;");
+            }
+            else {
+                this.code.unshift("    let parent = context;");
+            }
+        }
+        if (this.shouldDefineQWeb) {
+            this.code.unshift("    let QWeb = this.constructor;");
+        }
+        if (this.shouldDefineUtils) {
+            this.code.unshift("    let utils = this.constructor.utils;");
+        }
+        return this.code;
+    }
+    withParent(node) {
+        if (!this.allowMultipleRoots &&
+            this === this.rootContext &&
+            (this.parentNode || this.parentTextNode)) {
+            throw new Error("A template should not have more than one root node");
+        }
+        if (!this.rootContext.rootNode) {
+            this.rootContext.rootNode = node;
+        }
+        if (!this.parentNode && this.rootContext.shouldDefineResult) {
+            this.addLine(`result = vn${node};`);
+        }
+        return this.subContext("parentNode", node);
+    }
+    subContext(key, value) {
+        const newContext = Object.create(this);
+        newContext[key] = value;
+        return newContext;
+    }
+    indent() {
+        this.rootContext.indentLevel++;
+    }
+    dedent() {
+        this.rootContext.indentLevel--;
+    }
+    addLine(line) {
+        const prefix = new Array(this.indentLevel + 2).join("    ");
+        this.code.push(prefix + line);
+        return this.code.length - 1;
+    }
+    addIf(condition) {
+        this.addLine(`if (${condition}) {`);
+        this.indent();
+    }
+    addElse() {
+        this.dedent();
+        this.addLine("} else {");
+        this.indent();
+    }
+    closeIf() {
+        this.dedent();
+        this.addLine("}");
+    }
+    getValue(val) {
+        return val in this.variables ? this.getValue(this.variables[val]) : val;
+    }
+    /**
+     * Prepare an expression for being consumed at render time.  Its main job
+     * is to
+     * - replace unknown variables by a lookup in the context
+     * - replace already defined variables by their internal name
+     */
+    formatExpression(expr) {
+        this.rootContext.shouldDefineScope = true;
+        return compileExpr(expr, this.variables);
+    }
+    captureExpression(expr) {
+        this.rootContext.shouldDefineScope = true;
+        const argId = this.generateID();
+        const tokens = compileExprToArray(expr, this.variables);
+        const done = new Set();
+        return tokens
+            .map((tok) => {
+            if (tok.varName) {
+                if (!done.has(tok.varName)) {
+                    done.add(tok.varName);
+                    this.addLine(`const ${tok.varName}_${argId} = ${tok.value};`);
+                }
+                tok.value = `${tok.varName}_${argId}`;
+            }
+            return tok.value;
+        })
+            .join("");
+    }
+    /**
+     * Perform string interpolation on the given string. Note that if the whole
+     * string is an expression, it simply returns it (formatted and enclosed in
+     * parentheses).
+     * For instance:
+     *   'Hello {{x}}!' -> `Hello ${x}`
+     *   '{{x ? 'a': 'b'}}' -> (x ? 'a' : 'b')
+     */
+    interpolate(s) {
+        let matches = s.match(INTERP_REGEXP);
+        if (matches && matches[0].length === s.length) {
+            return `(${this.formatExpression(s.slice(2, -2))})`;
+        }
+        let r = s.replace(/\{\{.*?\}\}/g, (s) => "${" + this.formatExpression(s.slice(2, -2)) + "}");
+        return "`" + r + "`";
+    }
+    startProtectScope(codeBlock) {
+        const protectID = this.generateID();
+        this.rootContext.protectedScopeNumber++;
+        this.rootContext.shouldDefineScope = true;
+        const scopeExpr = `Object.create(scope);`;
+        this.addLine(`let _origScope${protectID} = scope;`);
+        this.addLine(`scope = ${scopeExpr}`);
+        if (!codeBlock) {
+            this.addLine(`scope.__access_mode__ = 'ro';`);
+        }
+        return protectID;
+    }
+    stopProtectScope(protectID) {
+        this.rootContext.protectedScopeNumber--;
+        this.addLine(`scope = _origScope${protectID};`);
+    }
+}
+CompilationContext.nextID = 1;
+
+//------------------------------------------------------------------------------
+// module/props.ts
+//------------------------------------------------------------------------------
+function updateProps(oldVnode, vnode) {
+    var key, cur, old, elm = vnode.elm, oldProps = oldVnode.data.props, props = vnode.data.props;
+    if (!oldProps && !props)
+        return;
+    if (oldProps === props)
+        return;
+    oldProps = oldProps || {};
+    props = props || {};
+    for (key in oldProps) {
+        if (!props[key]) {
+            delete elm[key];
+        }
+    }
+    for (key in props) {
+        cur = props[key];
+        old = oldProps[key];
+        if (old !== cur && (key !== "value" || elm[key] !== cur)) {
+            elm[key] = cur;
+        }
+    }
+}
+const propsModule = {
+    create: updateProps,
+    update: updateProps,
+};
+//------------------------------------------------------------------------------
+// module/eventlisteners.ts
+//------------------------------------------------------------------------------
+function invokeHandler(handler, vnode, event) {
+    if (typeof handler === "function") {
+        // call function handler
+        handler.call(vnode, event, vnode);
+    }
+    else if (typeof handler === "object") {
+        // call handler with arguments
+        if (typeof handler[0] === "function") {
+            // special case for single argument for performance
+            if (handler.length === 2) {
+                handler[0].call(vnode, handler[1], event, vnode);
+            }
+            else {
+                var args = handler.slice(1);
+                args.push(event);
+                args.push(vnode);
+                handler[0].apply(vnode, args);
+            }
+        }
+        else {
+            // call multiple handlers
+            for (let i = 0, iLen = handler.length; i < iLen; i++) {
+                invokeHandler(handler[i], vnode, event);
+            }
+        }
+    }
+}
+function handleEvent(event, vnode) {
+    var name = event.type, on = vnode.data.on;
+    // call event handler(s) if exists
+    if (on) {
+        if (on[name]) {
+            invokeHandler(on[name], vnode, event);
+        }
+        else if (on["!" + name]) {
+            invokeHandler(on["!" + name], vnode, event);
+        }
+    }
+}
+function createListener() {
+    return function handler(event) {
+        handleEvent(event, handler.vnode);
+    };
+}
+function updateEventListeners(oldVnode, vnode) {
+    var oldOn = oldVnode.data.on, oldListener = oldVnode.listener, oldElm = oldVnode.elm, on = vnode && vnode.data.on, elm = (vnode && vnode.elm), name;
+    // optimization for reused immutable handlers
+    if (oldOn === on) {
+        return;
+    }
+    // remove existing listeners which no longer used
+    if (oldOn && oldListener) {
+        // if element changed or deleted we remove all existing listeners unconditionally
+        if (!on) {
+            for (name in oldOn) {
+                // remove listener if element was changed or existing listeners removed
+                const capture = name.charAt(0) === "!";
+                name = capture ? name.slice(1) : name;
+                oldElm.removeEventListener(name, oldListener, capture);
+            }
+        }
+        else {
+            for (name in oldOn) {
+                // remove listener if existing listener removed
+                if (!on[name]) {
+                    const capture = name.charAt(0) === "!";
+                    name = capture ? name.slice(1) : name;
+                    oldElm.removeEventListener(name, oldListener, capture);
+                }
+            }
+        }
+    }
+    // add new listeners which has not already attached
+    if (on) {
+        // reuse existing listener or create new
+        var listener = (vnode.listener = oldVnode.listener || createListener());
+        // update vnode for listener
+        listener.vnode = vnode;
+        // if element changed or added we add all needed listeners unconditionally
+        if (!oldOn) {
+            for (name in on) {
+                // add listener if element was changed or new listeners added
+                const capture = name.charAt(0) === "!";
+                name = capture ? name.slice(1) : name;
+                elm.addEventListener(name, listener, capture);
+            }
+        }
+        else {
+            for (name in on) {
+                // add listener if new listener added
+                if (!oldOn[name]) {
+                    const capture = name.charAt(0) === "!";
+                    name = capture ? name.slice(1) : name;
+                    elm.addEventListener(name, listener, capture);
+                }
+            }
+        }
+    }
+}
+const eventListenersModule = {
+    create: updateEventListeners,
+    update: updateEventListeners,
+    destroy: updateEventListeners,
+};
+//------------------------------------------------------------------------------
+// attributes.ts
+//------------------------------------------------------------------------------
+const xlinkNS = "http://www.w3.org/1999/xlink";
+const xmlNS = "http://www.w3.org/XML/1998/namespace";
+const colonChar = 58;
+const xChar = 120;
+function updateAttrs(oldVnode, vnode) {
+    var key, elm = vnode.elm, oldAttrs = oldVnode.data.attrs, attrs = vnode.data.attrs;
+    if (!oldAttrs && !attrs)
+        return;
+    if (oldAttrs === attrs)
+        return;
+    oldAttrs = oldAttrs || {};
+    attrs = attrs || {};
+    // update modified attributes, add new attributes
+    for (key in attrs) {
+        const cur = attrs[key];
+        const old = oldAttrs[key];
+        if (old !== cur) {
+            if (cur === true) {
+                elm.setAttribute(key, "");
+            }
+            else if (cur === false) {
+                elm.removeAttribute(key);
+            }
+            else {
+                if (key.charCodeAt(0) !== xChar) {
+                    elm.setAttribute(key, cur);
+                }
+                else if (key.charCodeAt(3) === colonChar) {
+                    // Assume xml namespace
+                    elm.setAttributeNS(xmlNS, key, cur);
+                }
+                else if (key.charCodeAt(5) === colonChar) {
+                    // Assume xlink namespace
+                    elm.setAttributeNS(xlinkNS, key, cur);
+                }
+                else {
+                    elm.setAttribute(key, cur);
+                }
+            }
+        }
+    }
+    // remove removed attributes
+    // use `in` operator since the previous `for` iteration uses it (.i.e. add even attributes with undefined value)
+    // the other option is to remove all attributes with value == undefined
+    for (key in oldAttrs) {
+        if (!(key in attrs)) {
+            elm.removeAttribute(key);
+        }
+    }
+}
+const attrsModule = {
+    create: updateAttrs,
+    update: updateAttrs,
+};
+//------------------------------------------------------------------------------
+// class.ts
+//------------------------------------------------------------------------------
+function updateClass(oldVnode, vnode) {
+    var cur, name, elm, oldClass = oldVnode.data.class, klass = vnode.data.class;
+    if (!oldClass && !klass)
+        return;
+    if (oldClass === klass)
+        return;
+    oldClass = oldClass || {};
+    klass = klass || {};
+    elm = vnode.elm;
+    for (name in oldClass) {
+        if (name && !klass[name]) {
+            elm.classList.remove(name);
+        }
+    }
+    for (name in klass) {
+        cur = klass[name];
+        if (cur !== oldClass[name]) {
+            elm.classList[cur ? "add" : "remove"](name);
+        }
+    }
+}
+const classModule = { create: updateClass, update: updateClass };
+
+/**
+ * Owl VDOM
+ *
+ * This file contains an implementation of a virtual DOM, which is a system that
+ * can generate in-memory representations of a DOM tree, compare them, and
+ * eventually change a concrete DOM tree to match its representation, in an
+ * hopefully efficient way.
+ *
+ * Note that this code is a fork of Snabbdom, slightly tweaked/optimized for our
+ * needs (see https://github.com/snabbdom/snabbdom).
+ *
+ * The main exported values are:
+ * - interface VNode
+ * - h function (a helper function to generate a vnode)
+ * - patch function (to apply a vnode to an actual DOM node)
+ */
+function vnode(sel, data, children, text, elm) {
+    let key = data === undefined ? undefined : data.key;
+    return { sel, data, children, text, elm, key };
+}
+//------------------------------------------------------------------------------
+// snabbdom.ts
+//------------------------------------------------------------------------------
+function isUndef(s) {
+    return s === undefined;
+}
+function isDef(s) {
+    return s !== undefined;
+}
+const emptyNode = vnode("", {}, [], undefined, undefined);
+function sameVnode(vnode1, vnode2) {
+    return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
+}
+function isVnode(vnode) {
+    return vnode.sel !== undefined;
+}
+function createKeyToOldIdx(children, beginIdx, endIdx) {
+    let i, map = {}, key, ch;
+    for (i = beginIdx; i <= endIdx; ++i) {
+        ch = children[i];
+        if (ch != null) {
+            key = ch.key;
+            if (key !== undefined)
+                map[key] = i;
+        }
+    }
+    return map;
+}
+const hooks = ["create", "update", "remove", "destroy", "pre", "post"];
+function init(modules, domApi) {
+    let i, j, cbs = {};
+    const api = domApi !== undefined ? domApi : htmlDomApi;
+    for (i = 0; i < hooks.length; ++i) {
+        cbs[hooks[i]] = [];
+        for (j = 0; j < modules.length; ++j) {
+            const hook = modules[j][hooks[i]];
+            if (hook !== undefined) {
+                cbs[hooks[i]].push(hook);
+            }
+        }
+    }
+    function emptyNodeAt(elm) {
+        const id = elm.id ? "#" + elm.id : "";
+        const c = elm.className ? "." + elm.className.split(" ").join(".") : "";
+        return vnode(api.tagName(elm).toLowerCase() + id + c, {}, [], undefined, elm);
+    }
+    function createRmCb(childElm, listeners) {
+        return function rmCb() {
+            if (--listeners === 0) {
+                const parent = api.parentNode(childElm);
+                api.removeChild(parent, childElm);
+            }
+        };
+    }
+    function createElm(vnode, insertedVnodeQueue) {
+        let i, iLen, data = vnode.data;
+        if (data !== undefined) {
+            if (isDef((i = data.hook)) && isDef((i = i.init))) {
+                i(vnode);
+                data = vnode.data;
+            }
+        }
+        let children = vnode.children, sel = vnode.sel;
+        if (sel === "!") {
+            if (isUndef(vnode.text)) {
+                vnode.text = "";
+            }
+            vnode.elm = api.createComment(vnode.text);
+        }
+        else if (sel !== undefined) {
+            const elm = vnode.elm ||
+                (vnode.elm =
+                    isDef(data) && isDef((i = data.ns))
+                        ? api.createElementNS(i, sel)
+                        : api.createElement(sel));
+            for (i = 0, iLen = cbs.create.length; i < iLen; ++i)
+                cbs.create[i](emptyNode, vnode);
+            if (array(children)) {
+                for (i = 0, iLen = children.length; i < iLen; ++i) {
+                    const ch = children[i];
+                    if (ch != null) {
+                        api.appendChild(elm, createElm(ch, insertedVnodeQueue));
+                    }
+                }
+            }
+            else if (primitive(vnode.text)) {
+                api.appendChild(elm, api.createTextNode(vnode.text));
+            }
+            i = vnode.data.hook; // Reuse variable
+            if (isDef(i)) {
+                if (i.create)
+                    i.create(emptyNode, vnode);
+                if (i.insert)
+                    insertedVnodeQueue.push(vnode);
+            }
+        }
+        else {
+            vnode.elm = api.createTextNode(vnode.text);
+        }
+        return vnode.elm;
+    }
+    function addVnodes(parentElm, before, vnodes, startIdx, endIdx, insertedVnodeQueue) {
+        for (; startIdx <= endIdx; ++startIdx) {
+            const ch = vnodes[startIdx];
+            if (ch != null) {
+                api.insertBefore(parentElm, createElm(ch, insertedVnodeQueue), before);
+            }
+        }
+    }
+    function invokeDestroyHook(vnode) {
+        let i, iLen, j, jLen, data = vnode.data;
+        if (data !== undefined) {
+            if (isDef((i = data.hook)) && isDef((i = i.destroy)))
+                i(vnode);
+            for (i = 0, iLen = cbs.destroy.length; i < iLen; ++i)
+                cbs.destroy[i](vnode);
+            if (vnode.children !== undefined) {
+                for (j = 0, jLen = vnode.children.length; j < jLen; ++j) {
+                    i = vnode.children[j];
+                    if (i != null && typeof i !== "string") {
+                        invokeDestroyHook(i);
+                    }
+                }
+            }
+        }
+    }
+    function removeVnodes(parentElm, vnodes, startIdx, endIdx) {
+        for (; startIdx <= endIdx; ++startIdx) {
+            let i, iLen, listeners, rm, ch = vnodes[startIdx];
+            if (ch != null) {
+                if (isDef(ch.sel)) {
+                    invokeDestroyHook(ch);
+                    listeners = cbs.remove.length + 1;
+                    rm = createRmCb(ch.elm, listeners);
+                    for (i = 0, iLen = cbs.remove.length; i < iLen; ++i)
+                        cbs.remove[i](ch, rm);
+                    if (isDef((i = ch.data)) && isDef((i = i.hook)) && isDef((i = i.remove))) {
+                        i(ch, rm);
+                    }
+                    else {
+                        rm();
+                    }
+                }
+                else {
+                    // Text node
+                    api.removeChild(parentElm, ch.elm);
+                }
+            }
+        }
+    }
+    function updateChildren(parentElm, oldCh, newCh, insertedVnodeQueue) {
+        let oldStartIdx = 0, newStartIdx = 0;
+        let oldEndIdx = oldCh.length - 1;
+        let oldStartVnode = oldCh[0];
+        let oldEndVnode = oldCh[oldEndIdx];
+        let newEndIdx = newCh.length - 1;
+        let newStartVnode = newCh[0];
+        let newEndVnode = newCh[newEndIdx];
+        let oldKeyToIdx;
+        let idxInOld;
+        let elmToMove;
+        let before;
+        while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+            if (oldStartVnode == null) {
+                oldStartVnode = oldCh[++oldStartIdx]; // Vnode might have been moved left
+            }
+            else if (oldEndVnode == null) {
+                oldEndVnode = oldCh[--oldEndIdx];
+            }
+            else if (newStartVnode == null) {
+                newStartVnode = newCh[++newStartIdx];
+            }
+            else if (newEndVnode == null) {
+                newEndVnode = newCh[--newEndIdx];
+            }
+            else if (sameVnode(oldStartVnode, newStartVnode)) {
+                patchVnode(oldStartVnode, newStartVnode, insertedVnodeQueue);
+                oldStartVnode = oldCh[++oldStartIdx];
+                newStartVnode = newCh[++newStartIdx];
+            }
+            else if (sameVnode(oldEndVnode, newEndVnode)) {
+                patchVnode(oldEndVnode, newEndVnode, insertedVnodeQueue);
+                oldEndVnode = oldCh[--oldEndIdx];
+                newEndVnode = newCh[--newEndIdx];
+            }
+            else if (sameVnode(oldStartVnode, newEndVnode)) {
+                // Vnode moved right
+                patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue);
+                api.insertBefore(parentElm, oldStartVnode.elm, api.nextSibling(oldEndVnode.elm));
+                oldStartVnode = oldCh[++oldStartIdx];
+                newEndVnode = newCh[--newEndIdx];
+            }
+            else if (sameVnode(oldEndVnode, newStartVnode)) {
+                // Vnode moved left
+                patchVnode(oldEndVnode, newStartVnode, insertedVnodeQueue);
+                api.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm);
+                oldEndVnode = oldCh[--oldEndIdx];
+                newStartVnode = newCh[++newStartIdx];
+            }
+            else {
+                if (oldKeyToIdx === undefined) {
+                    oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx);
+                }
+                idxInOld = oldKeyToIdx[newStartVnode.key];
+                if (isUndef(idxInOld)) {
+                    // New element
+                    api.insertBefore(parentElm, createElm(newStartVnode, insertedVnodeQueue), oldStartVnode.elm);
+                    newStartVnode = newCh[++newStartIdx];
+                }
+                else {
+                    elmToMove = oldCh[idxInOld];
+                    if (elmToMove.sel !== newStartVnode.sel) {
+                        api.insertBefore(parentElm, createElm(newStartVnode, insertedVnodeQueue), oldStartVnode.elm);
+                    }
+                    else {
+                        patchVnode(elmToMove, newStartVnode, insertedVnodeQueue);
+                        oldCh[idxInOld] = undefined;
+                        api.insertBefore(parentElm, elmToMove.elm, oldStartVnode.elm);
+                    }
+                    newStartVnode = newCh[++newStartIdx];
+                }
+            }
+        }
+        if (oldStartIdx <= oldEndIdx || newStartIdx <= newEndIdx) {
+            if (oldStartIdx > oldEndIdx) {
+                before = newCh[newEndIdx + 1] == null ? null : newCh[newEndIdx + 1].elm;
+                addVnodes(parentElm, before, newCh, newStartIdx, newEndIdx, insertedVnodeQueue);
+            }
+            else {
+                removeVnodes(parentElm, oldCh, oldStartIdx, oldEndIdx);
+            }
+        }
+    }
+    function patchVnode(oldVnode, vnode, insertedVnodeQueue) {
+        let i, iLen, hook;
+        if (isDef((i = vnode.data)) && isDef((hook = i.hook)) && isDef((i = hook.prepatch))) {
+            i(oldVnode, vnode);
+        }
+        const elm = (vnode.elm = oldVnode.elm);
+        let oldCh = oldVnode.children;
+        let ch = vnode.children;
+        if (oldVnode === vnode)
+            return;
+        if (vnode.data !== undefined) {
+            for (i = 0, iLen = cbs.update.length; i < iLen; ++i)
+                cbs.update[i](oldVnode, vnode);
+            i = vnode.data.hook;
+            if (isDef(i) && isDef((i = i.update)))
+                i(oldVnode, vnode);
+        }
+        if (isUndef(vnode.text)) {
+            if (isDef(oldCh) && isDef(ch)) {
+                if (oldCh !== ch)
+                    updateChildren(elm, oldCh, ch, insertedVnodeQueue);
+            }
+            else if (isDef(ch)) {
+                if (isDef(oldVnode.text))
+                    api.setTextContent(elm, "");
+                addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue);
+            }
+            else if (isDef(oldCh)) {
+                removeVnodes(elm, oldCh, 0, oldCh.length - 1);
+            }
+            else if (isDef(oldVnode.text)) {
+                api.setTextContent(elm, "");
+            }
+        }
+        else if (oldVnode.text !== vnode.text) {
+            if (isDef(oldCh)) {
+                removeVnodes(elm, oldCh, 0, oldCh.length - 1);
+            }
+            api.setTextContent(elm, vnode.text);
+        }
+        if (isDef(hook) && isDef((i = hook.postpatch))) {
+            i(oldVnode, vnode);
+        }
+    }
+    return function patch(oldVnode, vnode) {
+        let i, iLen, elm, parent;
+        const insertedVnodeQueue = [];
+        for (i = 0, iLen = cbs.pre.length; i < iLen; ++i)
+            cbs.pre[i]();
+        if (!isVnode(oldVnode)) {
+            oldVnode = emptyNodeAt(oldVnode);
+        }
+        if (sameVnode(oldVnode, vnode)) {
+            patchVnode(oldVnode, vnode, insertedVnodeQueue);
+        }
+        else {
+            elm = oldVnode.elm;
+            parent = api.parentNode(elm);
+            createElm(vnode, insertedVnodeQueue);
+            if (parent !== null) {
+                api.insertBefore(parent, vnode.elm, api.nextSibling(elm));
+                removeVnodes(parent, [oldVnode], 0, 0);
+            }
+        }
+        for (i = 0, iLen = insertedVnodeQueue.length; i < iLen; ++i) {
+            insertedVnodeQueue[i].data.hook.insert(insertedVnodeQueue[i]);
+        }
+        for (i = 0, iLen = cbs.post.length; i < iLen; ++i)
+            cbs.post[i]();
+        return vnode;
+    };
+}
+//------------------------------------------------------------------------------
+// is.ts
+//------------------------------------------------------------------------------
+const array = Array.isArray;
+function primitive(s) {
+    return typeof s === "string" || typeof s === "number";
+}
+function createElement(tagName) {
+    return document.createElement(tagName);
+}
+function createElementNS(namespaceURI, qualifiedName) {
+    return document.createElementNS(namespaceURI, qualifiedName);
+}
+function createTextNode(text) {
+    return document.createTextNode(text);
+}
+function createComment(text) {
+    return document.createComment(text);
+}
+function insertBefore(parentNode, newNode, referenceNode) {
+    parentNode.insertBefore(newNode, referenceNode);
+}
+function removeChild(node, child) {
+    node.removeChild(child);
+}
+function appendChild(node, child) {
+    node.appendChild(child);
+}
+function parentNode(node) {
+    return node.parentNode;
+}
+function nextSibling(node) {
+    return node.nextSibling;
+}
+function tagName(elm) {
+    return elm.tagName;
+}
+function setTextContent(node, text) {
+    node.textContent = text;
+}
+const htmlDomApi = {
+    createElement,
+    createElementNS,
+    createTextNode,
+    createComment,
+    insertBefore,
+    removeChild,
+    appendChild,
+    parentNode,
+    nextSibling,
+    tagName,
+    setTextContent,
+};
+function addNS(data, children, sel) {
+    if (sel === "dummy") {
+        // we do not need to add the namespace on dummy elements, they come from a
+        // subcomponent, which will handle the namespace itself
+        return;
+    }
+    data.ns = "http://www.w3.org/2000/svg";
+    if (sel !== "foreignObject" && children !== undefined) {
+        for (let i = 0, iLen = children.length; i < iLen; ++i) {
+            const child = children[i];
+            let childData = child.data;
+            if (childData !== undefined) {
+                addNS(childData, child.children, child.sel);
+            }
+        }
+    }
+}
+function h(sel, b, c) {
+    var data = {}, children, text, i, iLen;
+    if (c !== undefined) {
+        data = b;
+        if (array(c)) {
+            children = c;
+        }
+        else if (primitive(c)) {
+            text = c;
+        }
+        else if (c && c.sel) {
+            children = [c];
+        }
+    }
+    else if (b !== undefined) {
+        if (array(b)) {
+            children = b;
+        }
+        else if (primitive(b)) {
+            text = b;
+        }
+        else if (b && b.sel) {
+            children = [b];
+        }
+        else {
+            data = b;
+        }
+    }
+    if (children !== undefined) {
+        for (i = 0, iLen = children.length; i < iLen; ++i) {
+            if (primitive(children[i]))
+                children[i] = vnode(undefined, undefined, undefined, children[i], undefined);
+        }
+    }
+    return vnode(sel, data, children, text, undefined);
+}
+
+const patch = init([eventListenersModule, attrsModule, propsModule, classModule]);
+
+let localStorage = null;
+const browser = {
+    setTimeout: window.setTimeout.bind(window),
+    clearTimeout: window.clearTimeout.bind(window),
+    setInterval: window.setInterval.bind(window),
+    clearInterval: window.clearInterval.bind(window),
+    requestAnimationFrame: window.requestAnimationFrame.bind(window),
+    random: Math.random,
+    Date: window.Date,
+    fetch: (window.fetch || (() => { })).bind(window),
+    get localStorage() {
+        return localStorage || window.localStorage;
+    },
+    set localStorage(newLocalStorage) {
+        localStorage = newLocalStorage;
+    },
+};
+
+/**
+ * Owl Utils
+ *
+ * We have here a small collection of utility functions:
+ *
+ * - whenReady
+ * - loadJS
+ * - loadFile
+ * - escape
+ * - debounce
+ */
+function whenReady(fn) {
+    return new Promise(function (resolve) {
+        if (document.readyState !== "loading") {
+            resolve();
+        }
+        else {
+            document.addEventListener("DOMContentLoaded", resolve, false);
+        }
+    }).then(fn || function () { });
+}
+const loadedScripts = {};
+function loadJS(url) {
+    if (url in loadedScripts) {
+        return loadedScripts[url];
+    }
+    const promise = new Promise(function (resolve, reject) {
+        const script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = url;
+        script.onload = function () {
+            resolve();
+        };
+        script.onerror = function () {
+            reject(`Error loading file '${url}'`);
+        };
+        const head = document.head || document.getElementsByTagName("head")[0];
+        head.appendChild(script);
+    });
+    loadedScripts[url] = promise;
+    return promise;
+}
+async function loadFile(url) {
+    const result = await browser.fetch(url);
+    if (!result.ok) {
+        throw new Error("Error while fetching xml templates");
+    }
+    return await result.text();
+}
+function escape(str) {
+    if (str === undefined) {
+        return "";
+    }
+    if (typeof str === "number") {
+        return String(str);
+    }
+    const p = document.createElement("p");
+    p.textContent = str;
+    return p.innerHTML;
+}
+/**
+ * Returns a function, that, as long as it continues to be invoked, will not
+ * be triggered. The function will be called after it stops being called for
+ * N milliseconds. If `immediate` is passed, trigger the function on the
+ * leading edge, instead of the trailing.
+ *
+ * Inspired by https://davidwalsh.name/javascript-debounce-function
+ */
+function debounce(func, wait, immediate) {
+    let timeout;
+    return function () {
+        const context = this;
+        const args = arguments;
+        function later() {
+            timeout = null;
+            if (!immediate) {
+                func.apply(context, args);
+            }
+        }
+        const callNow = immediate && !timeout;
+        browser.clearTimeout(timeout);
+        timeout = browser.setTimeout(later, wait);
+        if (callNow) {
+            func.apply(context, args);
+        }
+    };
+}
+function shallowEqual(p1, p2) {
+    for (let k in p1) {
+        if (p1[k] !== p2[k]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+var _utils = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    whenReady: whenReady,
+    loadJS: loadJS,
+    loadFile: loadFile,
+    escape: escape,
+    debounce: debounce,
+    shallowEqual: shallowEqual
+});
+
+//------------------------------------------------------------------------------
+// Const/global stuff/helpers
+//------------------------------------------------------------------------------
+const TRANSLATABLE_ATTRS = ["label", "title", "placeholder", "alt"];
+const lineBreakRE = /[\r\n]/;
+const whitespaceRE = /\s+/g;
+const translationRE = /^(\s*)([\s\S]+?)(\s*)$/;
+const NODE_HOOKS_PARAMS = {
+    create: "(_, n)",
+    insert: "vn",
+    remove: "(vn, rm)",
+    destroy: "()",
+};
+function isComponent(obj) {
+    return obj && obj.hasOwnProperty("__owl__");
+}
+class VDomArray extends Array {
+    toString() {
+        return vDomToString(this);
+    }
+}
+function vDomToString(vdom) {
+    return vdom
+        .map((vnode) => {
+        if (vnode.sel) {
+            const node = document.createElement(vnode.sel);
+            const result = patch(node, vnode);
+            return result.elm.outerHTML;
+        }
+        else {
+            return vnode.text;
+        }
+    })
+        .join("");
+}
+const UTILS = {
+    zero: Symbol("zero"),
+    toObj(expr) {
+        if (typeof expr === "string") {
+            expr = expr.trim();
+            if (!expr) {
+                return {};
+            }
+            let words = expr.split(/\s+/);
+            let result = {};
+            for (let i = 0; i < words.length; i++) {
+                result[words[i]] = true;
+            }
+            return result;
+        }
+        return expr;
+    },
+    shallowEqual,
+    addNameSpace(vnode) {
+        addNS(vnode.data, vnode.children, vnode.sel);
+    },
+    VDomArray,
+    vDomToString,
+    getComponent(obj) {
+        while (obj && !isComponent(obj)) {
+            obj = obj.__proto__;
+        }
+        return obj;
+    },
+    getScope(obj, property) {
+        const obj0 = obj;
+        while (obj &&
+            !obj.hasOwnProperty(property) &&
+            !(obj.hasOwnProperty("__access_mode__") && obj.__access_mode__ === "ro")) {
+            const newObj = obj.__proto__;
+            if (!newObj || isComponent(newObj)) {
+                return obj0;
+            }
+            obj = newObj;
+        }
+        return obj;
+    },
+};
+function parseXML(xml) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xml, "text/xml");
+    if (doc.getElementsByTagName("parsererror").length) {
+        let msg = "Invalid XML in template.";
+        const parsererrorText = doc.getElementsByTagName("parsererror")[0].textContent;
+        if (parsererrorText) {
+            msg += "\nThe parser has produced the following error message:\n" + parsererrorText;
+            const re = /\d+/g;
+            const firstMatch = re.exec(parsererrorText);
+            if (firstMatch) {
+                const lineNumber = Number(firstMatch[0]);
+                const line = xml.split("\n")[lineNumber - 1];
+                const secondMatch = re.exec(parsererrorText);
+                if (line && secondMatch) {
+                    const columnIndex = Number(secondMatch[0]) - 1;
+                    if (line[columnIndex]) {
+                        msg +=
+                            `\nThe error might be located at xml line ${lineNumber} column ${columnIndex}\n` +
+                                `${line}\n${"-".repeat(columnIndex - 1)}^`;
+                    }
+                }
+            }
+        }
+        throw new Error(msg);
+    }
+    return doc;
+}
+function escapeQuotes(str) {
+    return str.replace(/\'/g, "\\'");
+}
+//------------------------------------------------------------------------------
+// QWeb rendering engine
+//------------------------------------------------------------------------------
+class QWeb extends EventBus {
+    constructor(config = {}) {
+        super();
+        this.h = h;
+        // subTemplates are stored in two objects: a (local) mapping from a name to an
+        // id, and a (global) mapping from an id to the compiled function.  This is
+        // necessary to ensure that global templates can be called with more than one
+        // QWeb instance.
+        this.subTemplates = {};
+        this.isUpdating = false;
+        this.templates = Object.create(QWeb.TEMPLATES);
+        if (config.templates) {
+            this.addTemplates(config.templates);
+        }
+        if (config.translateFn) {
+            this.translateFn = config.translateFn;
+        }
+    }
+    static addDirective(directive) {
+        if (directive.name in QWeb.DIRECTIVE_NAMES) {
+            throw new Error(`Directive "${directive.name} already registered`);
+        }
+        QWeb.DIRECTIVES.push(directive);
+        QWeb.DIRECTIVE_NAMES[directive.name] = 1;
+        QWeb.DIRECTIVES.sort((d1, d2) => d1.priority - d2.priority);
+        if (directive.extraNames) {
+            directive.extraNames.forEach((n) => (QWeb.DIRECTIVE_NAMES[n] = 1));
+        }
+    }
+    static registerComponent(name, Component) {
+        if (QWeb.components[name]) {
+            throw new Error(`Component '${name}' has already been registered`);
+        }
+        QWeb.components[name] = Component;
+    }
+    /**
+     * Register globally a template.  All QWeb instances will obtain their
+     * templates from their own template map, and then, from the global static
+     * TEMPLATES property.
+     */
+    static registerTemplate(name, template) {
+        if (QWeb.TEMPLATES[name]) {
+            throw new Error(`Template '${name}' has already been registered`);
+        }
+        const qweb = new QWeb();
+        qweb.addTemplate(name, template);
+        QWeb.TEMPLATES[name] = qweb.templates[name];
+    }
+    /**
+     * Add a template to the internal template map.  Note that it is not
+     * immediately compiled.
+     */
+    addTemplate(name, xmlString, allowDuplicate) {
+        if (allowDuplicate && name in this.templates) {
+            return;
+        }
+        const doc = parseXML(xmlString);
+        if (!doc.firstChild) {
+            throw new Error("Invalid template (should not be empty)");
+        }
+        this._addTemplate(name, doc.firstChild);
+    }
+    /**
+     * Load templates from a xml (as a string or xml document).  This will look up
+     * for the first <templates> tag, and will consider each child of this as a
+     * template, with the name given by the t-name attribute.
+     */
+    addTemplates(xmlstr) {
+        const doc = typeof xmlstr === "string" ? parseXML(xmlstr) : xmlstr;
+        const templates = doc.getElementsByTagName("templates")[0];
+        if (!templates) {
+            return;
+        }
+        for (let elem of templates.children) {
+            const name = elem.getAttribute("t-name");
+            this._addTemplate(name, elem);
+        }
+    }
+    _addTemplate(name, elem) {
+        if (name in this.templates) {
+            throw new Error(`Template ${name} already defined`);
+        }
+        this._processTemplate(elem);
+        const template = {
+            elem,
+            fn: function (context, extra) {
+                const compiledFunction = this._compile(name);
+                template.fn = compiledFunction;
+                return compiledFunction.call(this, context, extra);
+            },
+        };
+        this.templates[name] = template;
+    }
+    _processTemplate(elem) {
+        let tbranch = elem.querySelectorAll("[t-elif], [t-else]");
+        for (let i = 0, ilen = tbranch.length; i < ilen; i++) {
+            let node = tbranch[i];
+            let prevElem = node.previousElementSibling;
+            let pattr = function (name) {
+                return prevElem.getAttribute(name);
+            };
+            let nattr = function (name) {
+                return +!!node.getAttribute(name);
+            };
+            if (prevElem && (pattr("t-if") || pattr("t-elif"))) {
+                if (pattr("t-foreach")) {
+                    throw new Error("t-if cannot stay at the same level as t-foreach when using t-elif or t-else");
+                }
+                if (["t-if", "t-elif", "t-else"].map(nattr).reduce(function (a, b) {
+                    return a + b;
+                }) > 1) {
+                    throw new Error("Only one conditional branching directive is allowed per node");
+                }
+                // All text (with only spaces) and comment nodes (nodeType 8) between
+                // branch nodes are removed
+                let textNode;
+                while ((textNode = node.previousSibling) !== prevElem) {
+                    if (textNode.nodeValue.trim().length && textNode.nodeType !== 8) {
+                        throw new Error("text is not allowed between branching directives");
+                    }
+                    textNode.remove();
+                }
+            }
+            else {
+                throw new Error("t-elif and t-else directives must be preceded by a t-if or t-elif directive");
+            }
+        }
+    }
+    /**
+     * Render a template
+     *
+     * @param {string} name the template should already have been added
+     */
+    render(name, context = {}, extra = null) {
+        const template = this.templates[name];
+        if (!template) {
+            throw new Error(`Template ${name} does not exist`);
+        }
+        return template.fn.call(this, context, extra);
+    }
+    /**
+     * Render a template to a html string.
+     *
+     * Note that this is more limited than the `render` method: it is not suitable
+     * to render a full component tree, since this is an asynchronous operation.
+     * This method can only render templates without components.
+     */
+    renderToString(name, context = {}, extra) {
+        const vnode = this.render(name, context, extra);
+        if (vnode.sel === undefined) {
+            return vnode.text;
+        }
+        const node = document.createElement(vnode.sel);
+        const elem = patch(node, vnode).elm;
+        function escapeTextNodes(node) {
+            if (node.nodeType === 3) {
+                node.textContent = escape(node.textContent);
+            }
+            for (let n of node.childNodes) {
+                escapeTextNodes(n);
+            }
+        }
+        escapeTextNodes(elem);
+        return elem.outerHTML;
+    }
+    /**
+     * Force all widgets connected to this QWeb instance to rerender themselves.
+     *
+     * This method is mostly useful for external code that want to modify the
+     * application in some cases.  For example, a router plugin.
+     */
+    forceUpdate() {
+        this.isUpdating = true;
+        Promise.resolve().then(() => {
+            if (this.isUpdating) {
+                this.isUpdating = false;
+                this.trigger("update");
+            }
+        });
+    }
+    _compile(name, options = {}) {
+        const elem = options.elem || this.templates[name].elem;
+        const isDebug = elem.attributes.hasOwnProperty("t-debug");
+        const ctx = new CompilationContext(name);
+        if (elem.tagName !== "t") {
+            ctx.shouldDefineResult = false;
+        }
+        if (options.hasParent) {
+            ctx.variables = Object.create(null);
+            ctx.parentNode = ctx.generateID();
+            ctx.allowMultipleRoots = true;
+            ctx.hasParentWidget = true;
+            ctx.shouldDefineResult = false;
+            ctx.addLine(`let c${ctx.parentNode} = extra.parentNode;`);
+            if (options.defineKey) {
+                ctx.addLine(`let key0 = extra.key || "";`);
+                ctx.hasKey0 = true;
+            }
+        }
+        this._compileNode(elem, ctx);
+        if (!options.hasParent) {
+            if (ctx.shouldDefineResult) {
+                ctx.addLine(`return result;`);
+            }
+            else {
+                if (!ctx.rootNode) {
+                    throw new Error(`A template should have one root node (${ctx.templateName})`);
+                }
+                ctx.addLine(`return vn${ctx.rootNode};`);
+            }
+        }
+        let code = ctx.generateCode();
+        const templateName = ctx.templateName.replace(/`/g, "'").slice(0, 200);
+        code.unshift(`    // Template name: "${templateName}"`);
+        let template;
+        try {
+            template = new Function("context, extra", code.join("\n"));
+        }
+        catch (e) {
+            console.groupCollapsed(`Invalid Code generated by ${templateName}`);
+            console.warn(code.join("\n"));
+            console.groupEnd();
+            throw new Error(`Invalid generated code while compiling template '${templateName}': ${e.message}`);
+        }
+        if (isDebug) {
+            const tpl = this.templates[name];
+            if (tpl) {
+                const msg = `Template: ${tpl.elem.outerHTML}\nCompiled code:\n${template.toString()}`;
+                console.log(msg);
+            }
+        }
+        return template;
+    }
+    /**
+     * Generate code from an xml node
+     *
+     */
+    _compileNode(node, ctx) {
+        if (!(node instanceof Element)) {
+            // this is a text node, there are no directive to apply
+            let text = node.textContent;
+            if (!ctx.inPreTag) {
+                if (lineBreakRE.test(text) && !text.trim()) {
+                    return;
+                }
+                text = text.replace(whitespaceRE, " ");
+            }
+            if (this.translateFn) {
+                if (node.parentNode.getAttribute("t-translation") !== "off") {
+                    const match = translationRE.exec(text);
+                    text = match[1] + this.translateFn(match[2]) + match[3];
+                }
+            }
+            if (ctx.parentNode) {
+                if (node.nodeType === 3) {
+                    ctx.addLine(`c${ctx.parentNode}.push({text: \`${text}\`});`);
+                }
+                else if (node.nodeType === 8) {
+                    ctx.addLine(`c${ctx.parentNode}.push(h('!', \`${text}\`));`);
+                }
+            }
+            else if (ctx.parentTextNode) {
+                ctx.addLine(`vn${ctx.parentTextNode}.text += \`${text}\`;`);
+            }
+            else {
+                // this is an unusual situation: this text node is the result of the
+                // template rendering.
+                let nodeID = ctx.generateID();
+                ctx.addLine(`let vn${nodeID} = {text: \`${text}\`};`);
+                ctx.addLine(`result = vn${nodeID};`);
+                ctx.rootContext.rootNode = nodeID;
+                ctx.rootContext.parentTextNode = nodeID;
+            }
+            return;
+        }
+        if (node.tagName !== "t" && node.hasAttribute("t-call")) {
+            const tCallNode = document.createElement("t");
+            tCallNode.setAttribute("t-call", node.getAttribute("t-call"));
+            node.removeAttribute("t-call");
+            node.prepend(tCallNode);
+        }
+        const firstLetter = node.tagName[0];
+        if (firstLetter === firstLetter.toUpperCase()) {
+            // this is a component, we modify in place the xml document to change
+            // <SomeComponent ... /> to <SomeComponent t-component="SomeComponent" ... />
+            node.setAttribute("t-component", node.tagName);
+        }
+        else if (node.tagName !== "t" && node.hasAttribute("t-component")) {
+            throw new Error(`Directive 't-component' can only be used on <t> nodes (used on a <${node.tagName}>)`);
+        }
+        const attributes = node.attributes;
+        const validDirectives = [];
+        const finalizers = [];
+        // maybe this is not optimal: we iterate on all attributes here, and again
+        // just after for each directive.
+        for (let i = 0; i < attributes.length; i++) {
+            let attrName = attributes[i].name;
+            if (attrName.startsWith("t-")) {
+                let dName = attrName.slice(2).split(/-|\./)[0];
+                if (!(dName in QWeb.DIRECTIVE_NAMES)) {
+                    throw new Error(`Unknown QWeb directive: '${attrName}'`);
+                }
+                if (node.tagName !== "t" && (attrName === "t-esc" || attrName === "t-raw")) {
+                    const tNode = document.createElement("t");
+                    tNode.setAttribute(attrName, node.getAttribute(attrName));
+                    for (let child of Array.from(node.childNodes)) {
+                        tNode.appendChild(child);
+                    }
+                    node.appendChild(tNode);
+                    node.removeAttribute(attrName);
+                }
+            }
+        }
+        const DIR_N = QWeb.DIRECTIVES.length;
+        const ATTR_N = attributes.length;
+        let withHandlers = false;
+        for (let i = 0; i < DIR_N; i++) {
+            let directive = QWeb.DIRECTIVES[i];
+            let fullName;
+            let value;
+            for (let j = 0; j < ATTR_N; j++) {
+                const name = attributes[j].name;
+                if (name === "t-" + directive.name ||
+                    name.startsWith("t-" + directive.name + "-") ||
+                    name.startsWith("t-" + directive.name + ".")) {
+                    fullName = name;
+                    value = attributes[j].textContent;
+                    validDirectives.push({ directive, value, fullName });
+                    if (directive.name === "on" || directive.name === "model") {
+                        withHandlers = true;
+                    }
+                }
+            }
+        }
+        for (let { directive, value, fullName } of validDirectives) {
+            if (directive.finalize) {
+                finalizers.push({ directive, value, fullName });
+            }
+            if (directive.atNodeEncounter) {
+                const isDone = directive.atNodeEncounter({
+                    node,
+                    qweb: this,
+                    ctx,
+                    fullName,
+                    value,
+                });
+                if (isDone) {
+                    for (let { directive, value, fullName } of finalizers) {
+                        directive.finalize({ node, qweb: this, ctx, fullName, value });
+                    }
+                    return;
+                }
+            }
+        }
+        if (node.nodeName !== "t") {
+            let nodeID = this._compileGenericNode(node, ctx, withHandlers);
+            ctx = ctx.withParent(nodeID);
+            let nodeHooks = {};
+            let addNodeHook = function (hook, handler) {
+                nodeHooks[hook] = nodeHooks[hook] || [];
+                nodeHooks[hook].push(handler);
+            };
+            for (let { directive, value, fullName } of validDirectives) {
+                if (directive.atNodeCreation) {
+                    directive.atNodeCreation({
+                        node,
+                        qweb: this,
+                        ctx,
+                        fullName,
+                        value,
+                        nodeID,
+                        addNodeHook,
+                    });
+                }
+            }
+            if (Object.keys(nodeHooks).length) {
+                ctx.addLine(`p${nodeID}.hook = {`);
+                for (let hook in nodeHooks) {
+                    ctx.addLine(`  ${hook}: ${NODE_HOOKS_PARAMS[hook]} => {`);
+                    for (let handler of nodeHooks[hook]) {
+                        ctx.addLine(`    ${handler}`);
+                    }
+                    ctx.addLine(`  },`);
+                }
+                ctx.addLine(`};`);
+            }
+        }
+        if (node.nodeName === "pre") {
+            ctx = ctx.subContext("inPreTag", true);
+        }
+        this._compileChildren(node, ctx);
+        // svg support
+        // we hadd svg namespace if it is a svg or if it is a g, but only if it is
+        // the root node.  This is the easiest way to support svg sub components:
+        // they need to have a g tag as root. Otherwise, we would need a complete
+        // list of allowed svg tags.
+        const shouldAddNS = node.nodeName === "svg" || (node.nodeName === "g" && ctx.rootNode === ctx.parentNode);
+        if (shouldAddNS) {
+            ctx.rootContext.shouldDefineUtils = true;
+            ctx.addLine(`utils.addNameSpace(vn${ctx.parentNode});`);
+        }
+        for (let { directive, value, fullName } of finalizers) {
+            directive.finalize({ node, qweb: this, ctx, fullName, value });
+        }
+    }
+    _compileGenericNode(node, ctx, withHandlers = true) {
+        // nodeType 1 is generic tag
+        if (node.nodeType !== 1) {
+            throw new Error("unsupported node type");
+        }
+        const attributes = node.attributes;
+        const attrs = [];
+        const props = [];
+        const tattrs = [];
+        function handleProperties(key, val) {
+            let isProp = false;
+            switch (node.nodeName) {
+                case "input":
+                    let type = node.getAttribute("type");
+                    if (type === "checkbox" || type === "radio") {
+                        if (key === "checked" || key === "indeterminate") {
+                            isProp = true;
+                        }
+                    }
+                    if (key === "value" || key === "readonly" || key === "disabled") {
+                        isProp = true;
+                    }
+                    break;
+                case "option":
+                    isProp = key === "selected" || key === "disabled";
+                    break;
+                case "textarea":
+                    isProp = key === "readonly" || key === "disabled";
+                    break;
+                case "button":
+                case "select":
+                case "optgroup":
+                    isProp = key === "disabled";
+                    break;
+            }
+            if (isProp) {
+                props.push(`${key}: _${val}`);
+            }
+        }
+        let classObj = "";
+        for (let i = 0; i < attributes.length; i++) {
+            let name = attributes[i].name;
+            let value = attributes[i].textContent;
+            if (this.translateFn && TRANSLATABLE_ATTRS.includes(name)) {
+                value = this.translateFn(value);
+            }
+            // regular attributes
+            if (!name.startsWith("t-") && !node.getAttribute("t-attf-" + name)) {
+                const attID = ctx.generateID();
+                if (name === "class") {
+                    if ((value = value.trim())) {
+                        let classDef = value
+                            .split(/\s+/)
+                            .map((a) => `'${escapeQuotes(a)}':true`)
+                            .join(",");
+                        if (classObj) {
+                            ctx.addLine(`Object.assign(${classObj}, {${classDef}})`);
+                        }
+                        else {
+                            classObj = `_${ctx.generateID()}`;
+                            ctx.addLine(`let ${classObj} = {${classDef}};`);
+                        }
+                    }
+                }
+                else {
+                    ctx.addLine(`let _${attID} = '${escapeQuotes(value)}';`);
+                    if (!name.match(/^[a-zA-Z]+$/)) {
+                        // attribute contains 'non letters' => we want to quote it
+                        name = '"' + name + '"';
+                    }
+                    attrs.push(`${name}: _${attID}`);
+                    handleProperties(name, attID);
+                }
+            }
+            // dynamic attributes
+            if (name.startsWith("t-att-")) {
+                let attName = name.slice(6);
+                const v = ctx.getValue(value);
+                let formattedValue = typeof v === "string" ? ctx.formatExpression(v) : `scope.${v.id}`;
+                if (attName === "class") {
+                    ctx.rootContext.shouldDefineUtils = true;
+                    formattedValue = `utils.toObj(${formattedValue})`;
+                    if (classObj) {
+                        ctx.addLine(`Object.assign(${classObj}, ${formattedValue})`);
+                    }
+                    else {
+                        classObj = `_${ctx.generateID()}`;
+                        ctx.addLine(`let ${classObj} = ${formattedValue};`);
+                    }
+                }
+                else {
+                    const attID = ctx.generateID();
+                    if (!attName.match(/^[a-zA-Z]+$/)) {
+                        // attribute contains 'non letters' => we want to quote it
+                        attName = '"' + attName + '"';
+                    }
+                    // we need to combine dynamic with non dynamic attributes:
+                    // class="a" t-att-class="'yop'" should be rendered as class="a yop"
+                    const attValue = node.getAttribute(attName);
+                    if (attValue) {
+                        const attValueID = ctx.generateID();
+                        ctx.addLine(`let _${attValueID} = ${formattedValue};`);
+                        formattedValue = `'${attValue}' + (_${attValueID} ? ' ' + _${attValueID} : '')`;
+                        const attrIndex = attrs.findIndex((att) => att.startsWith(attName + ":"));
+                        attrs.splice(attrIndex, 1);
+                    }
+                    ctx.addLine(`let _${attID} = ${formattedValue};`);
+                    attrs.push(`${attName}: _${attID}`);
+                    handleProperties(attName, attID);
+                }
+            }
+            if (name.startsWith("t-attf-")) {
+                let attName = name.slice(7);
+                if (!attName.match(/^[a-zA-Z]+$/)) {
+                    // attribute contains 'non letters' => we want to quote it
+                    attName = '"' + attName + '"';
+                }
+                const formattedExpr = ctx.interpolate(value);
+                const attID = ctx.generateID();
+                let staticVal = node.getAttribute(attName);
+                if (staticVal) {
+                    ctx.addLine(`let _${attID} = '${staticVal} ' + ${formattedExpr};`);
+                }
+                else {
+                    ctx.addLine(`let _${attID} = ${formattedExpr};`);
+                }
+                attrs.push(`${attName}: _${attID}`);
+            }
+            // t-att= attributes
+            if (name === "t-att") {
+                let id = ctx.generateID();
+                ctx.addLine(`let _${id} = ${ctx.formatExpression(value)};`);
+                tattrs.push(id);
+            }
+        }
+        let nodeID = ctx.generateID();
+        let key = ctx.loopNumber || ctx.hasKey0 ? `\`\${key${ctx.loopNumber}}_${nodeID}\`` : nodeID;
+        const parts = [`key:${key}`];
+        if (attrs.length + tattrs.length > 0) {
+            parts.push(`attrs:{${attrs.join(",")}}`);
+        }
+        if (props.length > 0) {
+            parts.push(`props:{${props.join(",")}}`);
+        }
+        if (classObj) {
+            parts.push(`class:${classObj}`);
+        }
+        if (withHandlers) {
+            parts.push(`on:{}`);
+        }
+        ctx.addLine(`let c${nodeID} = [], p${nodeID} = {${parts.join(",")}};`);
+        for (let id of tattrs) {
+            ctx.addIf(`_${id} instanceof Array`);
+            ctx.addLine(`p${nodeID}.attrs[_${id}[0]] = _${id}[1];`);
+            ctx.addElse();
+            ctx.addLine(`for (let key in _${id}) {`);
+            ctx.indent();
+            ctx.addLine(`p${nodeID}.attrs[key] = _${id}[key];`);
+            ctx.dedent();
+            ctx.addLine(`}`);
+            ctx.closeIf();
+        }
+        ctx.addLine(`let vn${nodeID} = h('${node.nodeName}', p${nodeID}, c${nodeID});`);
+        if (ctx.parentNode) {
+            ctx.addLine(`c${ctx.parentNode}.push(vn${nodeID});`);
+        }
+        else if (ctx.loopNumber || ctx.hasKey0) {
+            ctx.rootContext.shouldDefineResult = true;
+            ctx.addLine(`result = vn${nodeID};`);
+        }
+        return nodeID;
+    }
+    _compileChildren(node, ctx) {
+        if (node.childNodes.length > 0) {
+            for (let child of Array.from(node.childNodes)) {
+                this._compileNode(child, ctx);
+            }
+        }
+    }
+}
+QWeb.utils = UTILS;
+QWeb.components = Object.create(null);
+QWeb.DIRECTIVE_NAMES = {
+    name: 1,
+    att: 1,
+    attf: 1,
+    translation: 1,
+};
+QWeb.DIRECTIVES = [];
+QWeb.TEMPLATES = {};
+QWeb.nextId = 1;
+// dev mode enables better error messages or more costly validations
+QWeb.dev = false;
+QWeb.enableTransitions = true;
+// slots contains sub templates defined with t-set inside t-component nodes, and
+// are meant to be used by the t-slot directive.
+QWeb.slots = {};
+QWeb.nextSlotId = 1;
+QWeb.subTemplates = {};
+
+const parser = new DOMParser();
+function htmlToVDOM(html) {
+    const doc = parser.parseFromString(html, "text/html");
+    const result = [];
+    for (let child of doc.body.childNodes) {
+        result.push(htmlToVNode(child));
+    }
+    return result;
+}
+function htmlToVNode(node) {
+    if (!(node instanceof Element)) {
+        if (node instanceof Comment) {
+            return h("!", node.textContent);
+        }
+        return { text: node.textContent };
+    }
+    const attrs = {};
+    for (let attr of node.attributes) {
+        attrs[attr.name] = attr.textContent;
+    }
+    const children = [];
+    for (let c of node.childNodes) {
+        children.push(htmlToVNode(c));
+    }
+    const vnode = h(node.tagName, { attrs }, children);
+    if (vnode.sel === "svg") {
+        addNS(vnode.data, vnode.children, vnode.sel);
+    }
+    return vnode;
+}
+
+/**
+ * Owl QWeb Directives
+ *
+ * This file contains the implementation of most standard QWeb directives:
+ * - t-esc
+ * - t-raw
+ * - t-set/t-value
+ * - t-if/t-elif/t-else
+ * - t-call
+ * - t-foreach/t-as
+ * - t-debug
+ * - t-log
+ */
+//------------------------------------------------------------------------------
+// t-esc and t-raw
+//------------------------------------------------------------------------------
+QWeb.utils.htmlToVDOM = htmlToVDOM;
+function compileValueNode(value, node, qweb, ctx) {
+    ctx.rootContext.shouldDefineScope = true;
+    if (value === "0") {
+        if (ctx.parentNode) {
+            // the 'zero' magical symbol is where we can find the result of the rendering
+            // of  the body of the t-call.
+            ctx.rootContext.shouldDefineUtils = true;
+            const zeroArgs = ctx.escaping
+                ? `{text: utils.vDomToString(scope[utils.zero])}`
+                : `...scope[utils.zero]`;
+            ctx.addLine(`c${ctx.parentNode}.push(${zeroArgs});`);
+        }
+        return;
+    }
+    let exprID;
+    if (typeof value === "string") {
+        exprID = `_${ctx.generateID()}`;
+        ctx.addLine(`let ${exprID} = ${ctx.formatExpression(value)};`);
+    }
+    else {
+        exprID = `scope.${value.id}`;
+    }
+    ctx.addIf(`${exprID} != null`);
+    if (ctx.escaping) {
+        let protectID;
+        if (value.hasBody) {
+            ctx.rootContext.shouldDefineUtils = true;
+            protectID = ctx.startProtectScope();
+            ctx.addLine(`${exprID} = ${exprID} instanceof utils.VDomArray ? utils.vDomToString(${exprID}) : ${exprID};`);
+        }
+        if (ctx.parentTextNode) {
+            ctx.addLine(`vn${ctx.parentTextNode}.text += ${exprID};`);
+        }
+        else if (ctx.parentNode) {
+            ctx.addLine(`c${ctx.parentNode}.push({text: ${exprID}});`);
+        }
+        else {
+            let nodeID = ctx.generateID();
+            ctx.rootContext.rootNode = nodeID;
+            ctx.rootContext.parentTextNode = nodeID;
+            ctx.addLine(`let vn${nodeID} = {text: ${exprID}};`);
+            if (ctx.rootContext.shouldDefineResult) {
+                ctx.addLine(`result = vn${nodeID}`);
+            }
+        }
+        if (value.hasBody) {
+            ctx.stopProtectScope(protectID);
+        }
+    }
+    else {
+        ctx.rootContext.shouldDefineUtils = true;
+        if (value.hasBody) {
+            ctx.addLine(`const vnodeArray = ${exprID} instanceof utils.VDomArray ? ${exprID} : utils.htmlToVDOM(${exprID});`);
+            ctx.addLine(`c${ctx.parentNode}.push(...vnodeArray);`);
+        }
+        else {
+            ctx.addLine(`c${ctx.parentNode}.push(...utils.htmlToVDOM(${exprID}));`);
+        }
+    }
+    if (node.childNodes.length) {
+        ctx.addElse();
+        qweb._compileChildren(node, ctx);
+    }
+    ctx.closeIf();
+}
+QWeb.addDirective({
+    name: "esc",
+    priority: 70,
+    atNodeEncounter({ node, qweb, ctx }) {
+        let value = ctx.getValue(node.getAttribute("t-esc"));
+        compileValueNode(value, node, qweb, ctx.subContext("escaping", true));
+        return true;
+    },
+});
+QWeb.addDirective({
+    name: "raw",
+    priority: 80,
+    atNodeEncounter({ node, qweb, ctx }) {
+        let value = ctx.getValue(node.getAttribute("t-raw"));
+        compileValueNode(value, node, qweb, ctx);
+        return true;
+    },
+});
+//------------------------------------------------------------------------------
+// t-set
+//------------------------------------------------------------------------------
+QWeb.addDirective({
+    name: "set",
+    extraNames: ["value"],
+    priority: 60,
+    atNodeEncounter({ node, qweb, ctx }) {
+        ctx.rootContext.shouldDefineScope = true;
+        const variable = node.getAttribute("t-set");
+        let value = node.getAttribute("t-value");
+        ctx.variables[variable] = ctx.variables[variable] || {};
+        let qwebvar = ctx.variables[variable];
+        const hasBody = node.hasChildNodes();
+        qwebvar.id = variable;
+        qwebvar.expr = `scope.${variable}`;
+        if (value) {
+            const formattedValue = ctx.formatExpression(value);
+            let scopeExpr = `scope`;
+            if (ctx.protectedScopeNumber) {
+                ctx.rootContext.shouldDefineUtils = true;
+                scopeExpr = `utils.getScope(scope, '${variable}')`;
+            }
+            ctx.addLine(`${scopeExpr}.${variable} = ${formattedValue};`);
+            qwebvar.value = formattedValue;
+        }
+        if (hasBody) {
+            ctx.rootContext.shouldDefineUtils = true;
+            if (value) {
+                ctx.addIf(`!(${qwebvar.expr})`);
+            }
+            const tempParentNodeID = ctx.generateID();
+            const _parentNode = ctx.parentNode;
+            ctx.parentNode = tempParentNodeID;
+            ctx.addLine(`let c${tempParentNodeID} = new utils.VDomArray();`);
+            const nodeCopy = node.cloneNode(true);
+            for (let attr of ["t-set", "t-value", "t-if", "t-else", "t-elif"]) {
+                nodeCopy.removeAttribute(attr);
+            }
+            qweb._compileNode(nodeCopy, ctx);
+            ctx.addLine(`${qwebvar.expr} = c${tempParentNodeID}`);
+            qwebvar.value = `c${tempParentNodeID}`;
+            qwebvar.hasBody = true;
+            ctx.parentNode = _parentNode;
+            if (value) {
+                ctx.closeIf();
+            }
+        }
+        return true;
+    },
+});
+//------------------------------------------------------------------------------
+// t-if, t-elif, t-else
+//------------------------------------------------------------------------------
+QWeb.addDirective({
+    name: "if",
+    priority: 20,
+    atNodeEncounter({ node, ctx }) {
+        let cond = ctx.getValue(node.getAttribute("t-if"));
+        ctx.addIf(typeof cond === "string" ? ctx.formatExpression(cond) : `scope.${cond.id}`);
+        return false;
+    },
+    finalize({ ctx }) {
+        ctx.closeIf();
+    },
+});
+QWeb.addDirective({
+    name: "elif",
+    priority: 30,
+    atNodeEncounter({ node, ctx }) {
+        let cond = ctx.getValue(node.getAttribute("t-elif"));
+        ctx.addLine(`else if (${typeof cond === "string" ? ctx.formatExpression(cond) : `scope.${cond.id}`}) {`);
+        ctx.indent();
+        return false;
+    },
+    finalize({ ctx }) {
+        ctx.closeIf();
+    },
+});
+QWeb.addDirective({
+    name: "else",
+    priority: 40,
+    atNodeEncounter({ ctx }) {
+        ctx.addLine(`else {`);
+        ctx.indent();
+        return false;
+    },
+    finalize({ ctx }) {
+        ctx.closeIf();
+    },
+});
+//------------------------------------------------------------------------------
+// t-call
+//------------------------------------------------------------------------------
+QWeb.addDirective({
+    name: "call",
+    priority: 50,
+    atNodeEncounter({ node, qweb, ctx }) {
+        // Step 1: sanity checks
+        // ------------------------------------------------
+        ctx.rootContext.shouldDefineScope = true;
+        ctx.rootContext.shouldDefineUtils = true;
+        const subTemplate = node.getAttribute("t-call");
+        const isDynamic = INTERP_REGEXP.test(subTemplate);
+        const nodeTemplate = qweb.templates[subTemplate];
+        if (!isDynamic && !nodeTemplate) {
+            throw new Error(`Cannot find template "${subTemplate}" (t-call)`);
+        }
+        // Step 2: compile target template in sub templates
+        // ------------------------------------------------
+        let subIdstr;
+        if (isDynamic) {
+            const _id = ctx.generateID();
+            ctx.addLine(`let tname${_id} = ${ctx.interpolate(subTemplate)};`);
+            ctx.addLine(`let tid${_id} = this.subTemplates[tname${_id}];`);
+            ctx.addIf(`!tid${_id}`);
+            ctx.addLine(`tid${_id} = this.constructor.nextId++;`);
+            ctx.addLine(`this.subTemplates[tname${_id}] = tid${_id};`);
+            ctx.addLine(`this.constructor.subTemplates[tid${_id}] = this._compile(tname${_id}, {hasParent: true, defineKey: true});`);
+            ctx.closeIf();
+            subIdstr = `tid${_id}`;
+        }
+        else {
+            let subId = qweb.subTemplates[subTemplate];
+            if (!subId) {
+                subId = QWeb.nextId++;
+                qweb.subTemplates[subTemplate] = subId;
+                const subTemplateFn = qweb._compile(subTemplate, { hasParent: true, defineKey: true });
+                QWeb.subTemplates[subId] = subTemplateFn;
+            }
+            subIdstr = `'${subId}'`;
+        }
+        // Step 3: compile t-call body if necessary
+        // ------------------------------------------------
+        let hasBody = node.hasChildNodes();
+        const protectID = ctx.startProtectScope();
+        if (hasBody) {
+            // we add a sub scope to protect the ambient scope
+            ctx.addLine(`{`);
+            ctx.indent();
+            const nodeCopy = node.cloneNode(true);
+            for (let attr of ["t-if", "t-else", "t-elif", "t-call"]) {
+                nodeCopy.removeAttribute(attr);
+            }
+            // this local scope is intended to trap c__0
+            ctx.addLine(`{`);
+            ctx.indent();
+            ctx.addLine("let c__0 = [];");
+            qweb._compileNode(nodeCopy, ctx.subContext("parentNode", "__0"));
+            ctx.rootContext.shouldDefineUtils = true;
+            ctx.addLine("scope[utils.zero] = c__0;");
+            ctx.dedent();
+            ctx.addLine(`}`);
+        }
+        // Step 4: add the appropriate function call to current component
+        // ------------------------------------------------
+        const parentComponent = `utils.getComponent(context)`;
+        const key = ctx.generateTemplateKey();
+        const parentNode = ctx.parentNode ? `c${ctx.parentNode}` : "result";
+        const extra = `Object.assign({}, extra, {parentNode: ${parentNode}, parent: ${parentComponent}, key: ${key}})`;
+        if (ctx.parentNode) {
+            ctx.addLine(`this.constructor.subTemplates[${subIdstr}].call(this, scope, ${extra});`);
+        }
+        else {
+            // this is a t-call with no parentnode, we need to extract the result
+            ctx.rootContext.shouldDefineResult = true;
+            ctx.addLine(`result = []`);
+            ctx.addLine(`this.constructor.subTemplates[${subIdstr}].call(this, scope, ${extra});`);
+            ctx.addLine(`result = result[0]`);
+        }
+        // Step 5: restore previous scope
+        // ------------------------------------------------
+        if (hasBody) {
+            ctx.dedent();
+            ctx.addLine(`}`);
+        }
+        ctx.stopProtectScope(protectID);
+        return true;
+    },
+});
+//------------------------------------------------------------------------------
+// t-foreach
+//------------------------------------------------------------------------------
+QWeb.addDirective({
+    name: "foreach",
+    extraNames: ["as"],
+    priority: 10,
+    atNodeEncounter({ node, qweb, ctx }) {
+        ctx.rootContext.shouldDefineScope = true;
+        ctx = ctx.subContext("loopNumber", ctx.loopNumber + 1);
+        const elems = node.getAttribute("t-foreach");
+        const name = node.getAttribute("t-as");
+        let arrayID = ctx.generateID();
+        ctx.addLine(`let _${arrayID} = ${ctx.formatExpression(elems)};`);
+        ctx.addLine(`if (!_${arrayID}) { throw new Error('QWeb error: Invalid loop expression')}`);
+        let keysID = ctx.generateID();
+        let valuesID = ctx.generateID();
+        ctx.addLine(`let _${keysID} = _${valuesID} = _${arrayID};`);
+        ctx.addIf(`!(_${arrayID} instanceof Array)`);
+        ctx.addLine(`_${keysID} = Object.keys(_${arrayID});`);
+        ctx.addLine(`_${valuesID} = Object.values(_${arrayID});`);
+        ctx.closeIf();
+        ctx.addLine(`let _length${keysID} = _${keysID}.length;`);
+        let varsID = ctx.startProtectScope(true);
+        const loopVar = `i${ctx.loopNumber}`;
+        ctx.addLine(`for (let ${loopVar} = 0; ${loopVar} < _length${keysID}; ${loopVar}++) {`);
+        ctx.indent();
+        ctx.addLine(`scope.${name}_first = ${loopVar} === 0`);
+        ctx.addLine(`scope.${name}_last = ${loopVar} === _length${keysID} - 1`);
+        ctx.addLine(`scope.${name}_index = ${loopVar}`);
+        ctx.addLine(`scope.${name} = _${keysID}[${loopVar}]`);
+        ctx.addLine(`scope.${name}_value = _${valuesID}[${loopVar}]`);
+        const nodeCopy = node.cloneNode(true);
+        let shouldWarn = !nodeCopy.hasAttribute("t-key") &&
+            node.children.length === 1 &&
+            node.children[0].tagName !== "t" &&
+            !node.children[0].hasAttribute("t-key");
+        if (shouldWarn) {
+            console.warn(`Directive t-foreach should always be used with a t-key! (in template: '${ctx.templateName}')`);
+        }
+        if (nodeCopy.hasAttribute("t-key")) {
+            const expr = ctx.formatExpression(nodeCopy.getAttribute("t-key"));
+            ctx.addLine(`let key${ctx.loopNumber} = ${expr};`);
+            nodeCopy.removeAttribute("t-key");
+        }
+        else {
+            ctx.addLine(`let key${ctx.loopNumber} = i${ctx.loopNumber};`);
+        }
+        nodeCopy.removeAttribute("t-foreach");
+        qweb._compileNode(nodeCopy, ctx);
+        ctx.dedent();
+        ctx.addLine("}");
+        ctx.stopProtectScope(varsID);
+        return true;
+    },
+});
+//------------------------------------------------------------------------------
+// t-debug
+//------------------------------------------------------------------------------
+QWeb.addDirective({
+    name: "debug",
+    priority: 1,
+    atNodeEncounter({ ctx }) {
+        ctx.addLine("debugger;");
+    },
+});
+//------------------------------------------------------------------------------
+// t-log
+//------------------------------------------------------------------------------
+QWeb.addDirective({
+    name: "log",
+    priority: 1,
+    atNodeEncounter({ ctx, value }) {
+        const expr = ctx.formatExpression(value);
+        ctx.addLine(`console.log(${expr})`);
+    },
+});
+
+/**
+ * Owl QWeb Extensions
+ *
+ * This file contains the implementation of non standard QWeb directives, added
+ * by Owl and that will only work on Owl projects:
+ *
+ * - t-on
+ * - t-ref
+ * - t-transition
+ * - t-mounted
+ * - t-slot
+ * - t-model
+ */
+//------------------------------------------------------------------------------
+// t-on
+//------------------------------------------------------------------------------
+// these are pieces of code that will be injected into the event handler if
+// modifiers are specified
+const MODS_CODE = {
+    prevent: "e.preventDefault();",
+    self: "if (e.target !== this.elm) {return}",
+    stop: "e.stopPropagation();",
+};
+const FNAMEREGEXP = /^[$A-Z_][0-9A-Z_$]*$/i;
+function makeHandlerCode(ctx, fullName, value, putInCache, modcodes = MODS_CODE) {
+    let [event, ...mods] = fullName.slice(5).split(".");
+    if (mods.includes("capture")) {
+        event = "!" + event;
+    }
+    if (!event) {
+        throw new Error("Missing event name with t-on directive");
+    }
+    let code;
+    // check if it is a method with no args, a method with args or an expression
+    let args = "";
+    const name = value.replace(/\(.*\)/, function (_args) {
+        args = _args.slice(1, -1);
+        return "";
+    });
+    const isMethodCall = name.match(FNAMEREGEXP);
+    // then generate code
+    if (isMethodCall) {
+        ctx.rootContext.shouldDefineUtils = true;
+        const comp = `utils.getComponent(context)`;
+        if (args) {
+            const argId = ctx.generateID();
+            ctx.addLine(`let args${argId} = [${ctx.formatExpression(args)}];`);
+            code = `${comp}['${name}'](...args${argId}, e);`;
+            putInCache = false;
+        }
+        else {
+            code = `${comp}['${name}'](e);`;
+        }
+    }
+    else {
+        // if we get here, then it is an expression
+        // we need to capture every variable in it
+        putInCache = false;
+        code = ctx.captureExpression(value);
+    }
+    const modCode = mods.map((mod) => modcodes[mod]).join("");
+    let handler = `function (e) {if (context.__owl__.status === ${5 /* DESTROYED */}){return}${modCode}${code}}`;
+    if (putInCache) {
+        const key = ctx.generateTemplateKey(event);
+        ctx.addLine(`extra.handlers[${key}] = extra.handlers[${key}] || ${handler};`);
+        handler = `extra.handlers[${key}]`;
+    }
+    return { event, handler };
+}
+QWeb.addDirective({
+    name: "on",
+    priority: 90,
+    atNodeCreation({ ctx, fullName, value, nodeID }) {
+        const { event, handler } = makeHandlerCode(ctx, fullName, value, true);
+        ctx.addLine(`p${nodeID}.on['${event}'] = ${handler};`);
+    },
+});
+//------------------------------------------------------------------------------
+// t-ref
+//------------------------------------------------------------------------------
+QWeb.addDirective({
+    name: "ref",
+    priority: 95,
+    atNodeCreation({ ctx, value, addNodeHook }) {
+        ctx.rootContext.shouldDefineRefs = true;
+        const refKey = `ref${ctx.generateID()}`;
+        ctx.addLine(`const ${refKey} = ${ctx.interpolate(value)};`);
+        addNodeHook("create", `context.__owl__.refs[${refKey}] = n.elm;`);
+        addNodeHook("destroy", `delete context.__owl__.refs[${refKey}];`);
+    },
+});
+//------------------------------------------------------------------------------
+// t-transition
+//------------------------------------------------------------------------------
+QWeb.utils.nextFrame = function (cb) {
+    requestAnimationFrame(() => requestAnimationFrame(cb));
+};
+QWeb.utils.transitionInsert = function (vn, name) {
+    const elm = vn.elm;
+    // remove potential duplicated vnode that is currently being removed, to
+    // prevent from having twice the same node in the DOM during an animation
+    const dup = elm.parentElement && elm.parentElement.querySelector(`*[data-owl-key='${vn.key}']`);
+    if (dup) {
+        dup.remove();
+    }
+    elm.classList.add(name + "-enter");
+    elm.classList.add(name + "-enter-active");
+    elm.classList.remove(name + "-leave-active");
+    elm.classList.remove(name + "-leave-to");
+    const finalize = () => {
+        elm.classList.remove(name + "-enter-active");
+        elm.classList.remove(name + "-enter-to");
+    };
+    this.nextFrame(() => {
+        elm.classList.remove(name + "-enter");
+        elm.classList.add(name + "-enter-to");
+        whenTransitionEnd(elm, finalize);
+    });
+};
+QWeb.utils.transitionRemove = function (vn, name, rm) {
+    const elm = vn.elm;
+    elm.setAttribute("data-owl-key", vn.key);
+    elm.classList.add(name + "-leave");
+    elm.classList.add(name + "-leave-active");
+    const finalize = () => {
+        if (!elm.classList.contains(name + "-leave-active")) {
+            return;
+        }
+        elm.classList.remove(name + "-leave-active");
+        elm.classList.remove(name + "-leave-to");
+        rm();
+    };
+    this.nextFrame(() => {
+        elm.classList.remove(name + "-leave");
+        elm.classList.add(name + "-leave-to");
+        whenTransitionEnd(elm, finalize);
+    });
+};
+function getTimeout(delays, durations) {
+    /* istanbul ignore next */
+    while (delays.length < durations.length) {
+        delays = delays.concat(delays);
+    }
+    return Math.max.apply(null, durations.map((d, i) => {
+        return toMs(d) + toMs(delays[i]);
+    }));
+}
+// Old versions of Chromium (below 61.0.3163.100) formats floating pointer numbers
+// in a locale-dependent way, using a comma instead of a dot.
+// If comma is not replaced with a dot, the input will be rounded down (i.e. acting
+// as a floor function) causing unexpected behaviors
+function toMs(s) {
+    return Number(s.slice(0, -1).replace(",", ".")) * 1000;
+}
+function whenTransitionEnd(elm, cb) {
+    if (!elm.parentNode) {
+        // if we get here, this means that the element was removed for some other
+        // reasons, and in that case, we don't want to work on animation since nothing
+        // will be displayed anyway.
+        return;
+    }
+    const styles = window.getComputedStyle(elm);
+    const delays = (styles.transitionDelay || "").split(", ");
+    const durations = (styles.transitionDuration || "").split(", ");
+    const timeout = getTimeout(delays, durations);
+    if (timeout > 0) {
+        elm.addEventListener("transitionend", cb, { once: true });
+    }
+    else {
+        cb();
+    }
+}
+QWeb.addDirective({
+    name: "transition",
+    priority: 96,
+    atNodeCreation({ ctx, value, addNodeHook }) {
+        if (!QWeb.enableTransitions) {
+            return;
+        }
+        ctx.rootContext.shouldDefineUtils = true;
+        let name = value;
+        const hooks = {
+            insert: `utils.transitionInsert(vn, '${name}');`,
+            remove: `utils.transitionRemove(vn, '${name}', rm);`,
+        };
+        for (let hookName in hooks) {
+            addNodeHook(hookName, hooks[hookName]);
+        }
+    },
+});
+//------------------------------------------------------------------------------
+// t-slot
+//------------------------------------------------------------------------------
+QWeb.addDirective({
+    name: "slot",
+    priority: 80,
+    atNodeEncounter({ ctx, value, node, qweb }) {
+        const slotKey = ctx.generateID();
+        const valueExpr = value.match(INTERP_REGEXP) ? ctx.interpolate(value) : `'${value}'`;
+        ctx.addLine(`const slot${slotKey} = this.constructor.slots[context.__owl__.slotId + '_' + ${valueExpr}];`);
+        ctx.addIf(`slot${slotKey}`);
+        let parentNode = `c${ctx.parentNode}`;
+        if (!ctx.parentNode) {
+            ctx.rootContext.shouldDefineResult = true;
+            ctx.rootContext.shouldDefineUtils = true;
+            parentNode = `children${ctx.generateID()}`;
+            ctx.addLine(`let ${parentNode}= []`);
+            ctx.addLine(`result = {}`);
+        }
+        ctx.addLine(`slot${slotKey}.call(this, context.__owl__.scope, Object.assign({}, extra, {parentNode: ${parentNode}, parent: extra.parent || context}));`);
+        if (!ctx.parentNode) {
+            ctx.addLine(`utils.defineProxy(result, ${parentNode}[0]);`);
+        }
+        if (node.hasChildNodes()) {
+            ctx.addElse();
+            const nodeCopy = node.cloneNode(true);
+            nodeCopy.removeAttribute("t-slot");
+            qweb._compileNode(nodeCopy, ctx);
+        }
+        ctx.closeIf();
+        return true;
+    },
+});
+//------------------------------------------------------------------------------
+// t-model
+//------------------------------------------------------------------------------
+QWeb.utils.toNumber = function (val) {
+    const n = parseFloat(val);
+    return isNaN(n) ? val : n;
+};
+const hasDotAtTheEnd = /\.[\w_]+\s*$/;
+const hasBracketsAtTheEnd = /\[[^\[]+\]\s*$/;
+QWeb.addDirective({
+    name: "model",
+    priority: 42,
+    atNodeCreation({ ctx, nodeID, value, node, fullName, addNodeHook }) {
+        const type = node.getAttribute("type");
+        let handler;
+        let event = fullName.includes(".lazy") ? "change" : "input";
+        // First step: we need to understand the structure of the expression, and
+        // from it, extract a base expression (that we can capture, which is
+        // important because it will be used in a handler later) and a formatted
+        // expression (which uses the captured base expression)
+        //
+        // Also, we support 2 kinds of values: some.expr.value or some.expr[value]
+        // For the first one, we have:
+        // - base expression = scope[some].expr
+        // - expression = exprX.value (where exprX is the var that captures the base expr)
+        // and for the expression with brackets:
+        // - base expression = scope[some].expr
+        // - expression = exprX[keyX] (where exprX is the var that captures the base expr
+        //        and keyX captures scope[value])
+        let expr;
+        let baseExpr;
+        if (hasDotAtTheEnd.test(value)) {
+            // we manage the case where the expr has a dot: some.expr.value
+            const index = value.lastIndexOf(".");
+            baseExpr = value.slice(0, index);
+            ctx.addLine(`let expr${nodeID} = ${ctx.formatExpression(baseExpr)};`);
+            expr = `expr${nodeID}${value.slice(index)}`;
+        }
+        else if (hasBracketsAtTheEnd.test(value)) {
+            // we manage here the case where the expr ends in a bracket expression:
+            //    some.expr[value]
+            const index = value.lastIndexOf("[");
+            baseExpr = value.slice(0, index);
+            ctx.addLine(`let expr${nodeID} = ${ctx.formatExpression(baseExpr)};`);
+            let exprKey = value.trimRight().slice(index + 1, -1);
+            ctx.addLine(`let exprKey${nodeID} = ${ctx.formatExpression(exprKey)};`);
+            expr = `expr${nodeID}[exprKey${nodeID}]`;
+        }
+        else {
+            throw new Error(`Invalid t-model expression: "${value}" (it should be assignable)`);
+        }
+        const key = ctx.generateTemplateKey();
+        if (node.tagName === "select") {
+            ctx.addLine(`p${nodeID}.props = {value: ${expr}};`);
+            addNodeHook("create", `n.elm.value=${expr};`);
+            event = "change";
+            handler = `(ev) => {${expr} = ev.target.value}`;
+        }
+        else if (type === "checkbox") {
+            ctx.addLine(`p${nodeID}.props = {checked: ${expr}};`);
+            handler = `(ev) => {${expr} = ev.target.checked}`;
+        }
+        else if (type === "radio") {
+            const nodeValue = node.getAttribute("value");
+            ctx.addLine(`p${nodeID}.props = {checked:${expr} === '${nodeValue}'};`);
+            handler = `(ev) => {${expr} = ev.target.value}`;
+            event = "click";
+        }
+        else {
+            ctx.addLine(`p${nodeID}.props = {value: ${expr}};`);
+            const trimCode = fullName.includes(".trim") ? ".trim()" : "";
+            let valueCode = `ev.target.value${trimCode}`;
+            if (fullName.includes(".number")) {
+                ctx.rootContext.shouldDefineUtils = true;
+                valueCode = `utils.toNumber(${valueCode})`;
+            }
+            handler = `(ev) => {${expr} = ${valueCode}}`;
+        }
+        ctx.addLine(`extra.handlers[${key}] = extra.handlers[${key}] || (${handler});`);
+        ctx.addLine(`p${nodeID}.on['${event}'] = extra.handlers[${key}];`);
+    },
+});
+//------------------------------------------------------------------------------
+// t-key
+//------------------------------------------------------------------------------
+QWeb.addDirective({
+    name: "key",
+    priority: 45,
+    atNodeEncounter({ ctx, value, node }) {
+        if (ctx.loopNumber === 0) {
+            ctx.keyStack.push(ctx.rootContext.hasKey0);
+            ctx.rootContext.hasKey0 = true;
+        }
+        ctx.addLine("{");
+        ctx.indent();
+        ctx.addLine(`let key${ctx.loopNumber} = ${ctx.formatExpression(value)};`);
+    },
+    finalize({ ctx }) {
+        ctx.dedent();
+        ctx.addLine("}");
+        if (ctx.loopNumber === 0) {
+            ctx.rootContext.hasKey0 = ctx.keyStack.pop();
+        }
+    },
+});
+
+const config = {};
+Object.defineProperty(config, "mode", {
+    get() {
+        return QWeb.dev ? "dev" : "prod";
+    },
+    set(mode) {
+        QWeb.dev = mode === "dev";
+        if (QWeb.dev) {
+            const url = `https://github.com/odoo/owl/blob/master/doc/reference/config.md#mode`;
+            console.warn(`Owl is running in 'dev' mode.  This is not suitable for production use. See ${url} for more information.`);
+        }
+        else {
+            console.log(`Owl is now running in 'prod' mode.`);
+        }
+    },
+});
+Object.defineProperty(config, "enableTransitions", {
+    get() {
+        return QWeb.enableTransitions;
+    },
+    set(value) {
+        QWeb.enableTransitions = value;
+    },
+});
+
+/**
+ * We define here OwlEvent, a subclass of CustomEvent, with an additional
+ * attribute:
+ *  - originalComponent: the component that triggered the event
+ */
+class OwlEvent extends CustomEvent {
+    constructor(component, eventType, options) {
+        super(eventType, options);
+        this.originalComponent = component;
+    }
+}
+
+//------------------------------------------------------------------------------
+// t-component
+//------------------------------------------------------------------------------
+const T_COMPONENT_MODS_CODE = Object.assign({}, MODS_CODE, {
+    self: "if (e.target !== vn.elm) {return}",
+});
+QWeb.utils.defineProxy = function defineProxy(target, source) {
+    for (let k in source) {
+        Object.defineProperty(target, k, {
+            get() {
+                return source[k];
+            },
+            set(val) {
+                source[k] = val;
+            },
+        });
+    }
+};
+QWeb.utils.assignHooks = function assignHooks(dataObj, hooks) {
+    if ("hook" in dataObj) {
+        const hookObject = dataObj.hook;
+        for (let name in hooks) {
+            const current = hookObject[name];
+            const fn = hooks[name];
+            if (current) {
+                hookObject[name] = (...args) => {
+                    current(...args);
+                    fn(...args);
+                };
+            }
+            else {
+                hookObject[name] = fn;
+            }
+        }
+    }
+    else {
+        dataObj.hook = hooks;
+    }
+};
+/**
+ * The t-component directive is certainly a complicated and hard to maintain piece
+ * of code.  To help you, fellow developer, if you have to maintain it, I offer
+ * you this advice: Good luck...
+ *
+ * Since it is not 'direct' code, but rather code that generates other code, it
+ * is not easy to understand.  To help you, here  is a detailed and commented
+ * explanation of the code generated by the t-component directive for the following
+ * situation:
+ * ```xml
+ *   <Child
+ *      t-key="'somestring'"
+ *      flag="state.flag"
+ *      t-transition="fade"/>
+ * ```
+ *
+ * ```js
+ * // we assign utils on top of the function because it will be useful for
+ * // each components
+ * let utils = this.utils;
+ *
+ * // this is the virtual node representing the parent div
+ * let c1 = [], p1 = { key: 1 };
+ * var vn1 = h("div", p1, c1);
+ *
+ * // t-component directive: we start by evaluating the expression given by t-key:
+ * let key5 = "somestring";
+ *
+ * // def3 is the promise that will contain later either the new component
+ * // creation, or the props update...
+ * let def3;
+ *
+ * // this is kind of tricky: we need here to find if the component was already
+ * // created by a previous rendering.  This is done by checking the internal
+ * // `cmap` (children map) of the parent component: it maps keys to component ids,
+ * // and, then, if there is an id, we look into the children list to get the
+ * // instance
+ * let w4 =
+ *   key5 in context.__owl__.cmap
+ *   ? context.__owl__.children[context.__owl__.cmap[key5]]
+ *   : false;
+ *
+ * // We keep the index of the position of the component in the closure.  We push
+ * // null to reserve the slot, and will replace it later by the component vnode,
+ * // when it will be ready (do not forget that preparing/rendering a component is
+ * // asynchronous)
+ * let _2_index = c1.length;
+ * c1.push(null);
+ *
+ * // we evaluate here the props given to the component. It is done here to be
+ * // able to easily reference it later, and also, it might be an expensive
+ * // computation, so it is certainly better to do it only once
+ * let props4 = { flag: context["state"].flag };
+ *
+ * // If we have a component, currently rendering, but not ready yet, we do not want
+ * // to wait for it to be ready if we can avoid it
+ * if (w4 && w4.__owl__.renderPromise && !w4.__owl__.vnode) {
+ *   // we check if the props are the same.  In that case, we can simply reuse
+ *   // the previous rendering and skip all useless work
+ *   if (utils.shallowEqual(props4, w4.__owl__.renderProps)) {
+ *     def3 = w4.__owl__.renderPromise;
+ *   } else {
+ *     // if the props are not the same, we destroy the component and starts anew.
+ *     // this will be faster than waiting for its rendering, then updating it
+ *     w4.destroy();
+ *     w4 = false;
+ *   }
+ * }
+ *
+ * if (!w4) {
+ *   // in this situation, we need to create a new component.  First step is
+ *   // to get a reference to the class, then create an instance with
+ *   // current context as parent, and the props.
+ *   let W4 = context.component && context.components[componentKey4] || QWeb.component[componentKey4];
+
+ *   if (!W4) {
+ *     throw new Error("Cannot find the definition of component 'child'");
+ *   }
+ *   w4 = new W4(owner, props4);
+ *
+ *   // Whenever we rerender the parent component, we need to be sure that we
+ *   // are able to find the component instance. To do that, we register it to
+ *   // the parent cmap (children map).  Note that the 'template' key is
+ *   // used here, since this is what identify the component from the template
+ *   // perspective.
+ *   context.__owl__.cmap[key5] = w4.__owl__.id;
+ *
+ *   // __prepare is called, to basically call willStart, then render the
+ *   // component
+ *   def3 = w4.__prepare();
+ *
+ *   def3 = def3.then(vnode => {
+ *     // we create here a virtual node for the parent (NOT the component). This
+ *     // means that the vdom of the parent will be stopped here, and from
+ *     // the parent's perspective, it simply is a vnode with no children.
+ *     // However, it shares the same dom element with the component root
+ *     // vnode.
+ *     let pvnode = h(vnode.sel, { key: key5 });
+ *
+ *     // we add hooks to the parent vnode so we can interact with the new
+ *     // component at the proper time
+ *     pvnode.data.hook = {
+ *       insert(vn) {
+ *         // the __mount method will patch the component vdom into the elm vn.elm,
+ *         // then call the mounted hooks. However, suprisingly, the snabbdom
+ *         // patch method actually replace the elm by a new elm, so we need
+ *         // to synchronise the pvnode elm with the resulting elm
+ *         let nvn = w4.__mount(vnode, vn.elm);
+ *         pvnode.elm = nvn.elm;
+ *         // what follows is only present if there are animations on the component
+ *         utils.transitionInsert(vn, "fade");
+ *       },
+ *       remove() {
+ *         // override with empty function to prevent from removing the node
+ *         // directly. It will be removed when destroy is called anyway, which
+ *         // delays the removal if there are animations.
+ *       },
+ *       destroy() {
+ *         // if there are animations, we delay the call to destroy on the
+ *         // component, if not, we call it directly.
+ *         let finalize = () => {
+ *           w4.destroy();
+ *         };
+ *         utils.transitionRemove(vn, "fade", finalize);
+ *       }
+ *     };
+ *     // the pvnode is inserted at the correct position in the div's children
+ *     c1[_2_index] = pvnode;
+ *
+ *     // we keep here a reference to the parent vnode (representing the
+ *     // component, so we can reuse it later whenever we update the component
+ *     w4.__owl__.pvnode = pvnode;
+ *   });
+ * } else {
+ *   // this is the 'update' path of the directive.
+ *   // the call to __updateProps is the actual component update
+ *   // Note that we only update the props if we cannot reuse the previous
+ *   // rendering work (in the case it was rendered with the same props)
+ *   def3 = def3 || w4.__updateProps(props4, extra.forceUpdate, extra.patchQueue);
+ *   def3 = def3.then(() => {
+ *     // if component was destroyed in the meantime, we do nothing (so, this
+ *     // means that the parent's element children list will have a null in
+ *     // the component's position, which will cause the pvnode to be removed
+ *     // when it is patched.
+ *     if (w4.__owl__.isDestroyed) {
+ *       return;
+ *     }
+ *     // like above, we register the pvnode to the children list, so it
+ *     // will not be patched out of the dom.
+ *     let pvnode = w4.__owl__.pvnode;
+ *     c1[_2_index] = pvnode;
+ *   });
+ * }
+ *
+ * // we register the deferred here so the parent can coordinate its patch operation
+ * // with all the children.
+ * extra.promises.push(def3);
+ * return vn1;
+ * ```
+ */
+QWeb.addDirective({
+    name: "component",
+    extraNames: ["props"],
+    priority: 100,
+    atNodeEncounter({ ctx, value, node, qweb }) {
+        ctx.addLine(`// Component '${value}'`);
+        ctx.rootContext.shouldDefineQWeb = true;
+        ctx.rootContext.shouldDefineParent = true;
+        ctx.rootContext.shouldDefineUtils = true;
+        ctx.rootContext.shouldDefineScope = true;
+        let hasDynamicProps = node.getAttribute("t-props") ? true : false;
+        // t-on- events and t-transition
+        const events = [];
+        let transition = "";
+        const attributes = node.attributes;
+        const props = {};
+        for (let i = 0; i < attributes.length; i++) {
+            const name = attributes[i].name;
+            const value = attributes[i].textContent;
+            if (name.startsWith("t-on-")) {
+                events.push([name, value]);
+            }
+            else if (name === "t-transition") {
+                if (QWeb.enableTransitions) {
+                    transition = value;
+                }
+            }
+            else if (!name.startsWith("t-")) {
+                if (name !== "class" && name !== "style") {
+                    // this is a prop!
+                    props[name] = ctx.formatExpression(value) || "undefined";
+                }
+            }
+        }
+        // computing the props string representing the props object
+        let propStr = Object.keys(props)
+            .map((k) => k + ":" + props[k])
+            .join(",");
+        let componentID = ctx.generateID();
+        const templateKey = ctx.generateTemplateKey();
+        let ref = node.getAttribute("t-ref");
+        let refExpr = "";
+        let refKey = "";
+        if (ref) {
+            ctx.rootContext.shouldDefineRefs = true;
+            refKey = `ref${ctx.generateID()}`;
+            ctx.addLine(`const ${refKey} = ${ctx.interpolate(ref)};`);
+            refExpr = `context.__owl__.refs[${refKey}] = w${componentID};`;
+        }
+        let finalizeComponentCode = `w${componentID}.destroy();`;
+        if (ref) {
+            finalizeComponentCode += `delete context.__owl__.refs[${refKey}];`;
+        }
+        if (transition) {
+            finalizeComponentCode = `let finalize = () => {
+          ${finalizeComponentCode}
+        };
+        delete w${componentID}.__owl__.transitionInserted;
+        utils.transitionRemove(vn, '${transition}', finalize);`;
+        }
+        let createHook = "";
+        let classAttr = node.getAttribute("class");
+        let tattClass = node.getAttribute("t-att-class");
+        let styleAttr = node.getAttribute("style");
+        let tattStyle = node.getAttribute("t-att-style");
+        if (tattStyle) {
+            const attVar = `_${ctx.generateID()}`;
+            ctx.addLine(`const ${attVar} = ${ctx.formatExpression(tattStyle)};`);
+            tattStyle = attVar;
+        }
+        let classObj = "";
+        if (classAttr || tattClass || styleAttr || tattStyle || events.length) {
+            if (classAttr) {
+                let classDef = classAttr
+                    .trim()
+                    .split(/\s+/)
+                    .map((a) => `'${a}':true`)
+                    .join(",");
+                classObj = `_${ctx.generateID()}`;
+                ctx.addLine(`let ${classObj} = {${classDef}};`);
+            }
+            if (tattClass) {
+                let tattExpr = ctx.formatExpression(tattClass);
+                if (tattExpr[0] !== "{" || tattExpr[tattExpr.length - 1] !== "}") {
+                    tattExpr = `utils.toObj(${tattExpr})`;
+                }
+                if (classAttr) {
+                    ctx.addLine(`Object.assign(${classObj}, ${tattExpr})`);
+                }
+                else {
+                    classObj = `_${ctx.generateID()}`;
+                    ctx.addLine(`let ${classObj} = ${tattExpr};`);
+                }
+            }
+            let eventsCode = events
+                .map(function ([name, value]) {
+                const capture = name.match(/\.capture/);
+                name = capture ? name.replace(/\.capture/, "") : name;
+                const { event, handler } = makeHandlerCode(ctx, name, value, false, T_COMPONENT_MODS_CODE);
+                if (capture) {
+                    return `vn.elm.addEventListener('${event}', ${handler}, true);`;
+                }
+                return `vn.elm.addEventListener('${event}', ${handler});`;
+            })
+                .join("");
+            const styleExpr = tattStyle || (styleAttr ? `'${styleAttr}'` : false);
+            const styleCode = styleExpr ? `vn.elm.style = ${styleExpr};` : "";
+            createHook = `utils.assignHooks(vnode.data, {create(_, vn){${styleCode}${eventsCode}}});`;
+        }
+        ctx.addLine(`let w${componentID} = ${templateKey} in parent.__owl__.cmap ? parent.__owl__.children[parent.__owl__.cmap[${templateKey}]] : false;`);
+        let shouldProxy = !ctx.parentNode;
+        if (shouldProxy) {
+            let id = ctx.generateID();
+            ctx.rootContext.rootNode = id;
+            shouldProxy = true;
+            ctx.rootContext.shouldDefineResult = true;
+            ctx.addLine(`let vn${id} = {};`);
+            ctx.addLine(`result = vn${id};`);
+        }
+        if (hasDynamicProps) {
+            const dynamicProp = ctx.formatExpression(node.getAttribute("t-props"));
+            ctx.addLine(`let props${componentID} = Object.assign({${propStr}}, ${dynamicProp});`);
+        }
+        else {
+            ctx.addLine(`let props${componentID} = {${propStr}};`);
+        }
+        ctx.addIf(`w${componentID} && w${componentID}.__owl__.currentFiber && !w${componentID}.__owl__.vnode`);
+        ctx.addLine(`w${componentID}.destroy();`);
+        ctx.addLine(`w${componentID} = false;`);
+        ctx.closeIf();
+        let registerCode = "";
+        if (shouldProxy) {
+            registerCode = `utils.defineProxy(vn${ctx.rootNode}, pvnode);`;
+        }
+        // SLOTS
+        const hasSlots = node.childNodes.length;
+        let scope = hasSlots ? `Object.assign(Object.create(context), scope)` : "undefined";
+        ctx.addIf(`w${componentID}`);
+        // need to update component
+        let styleCode = "";
+        if (tattStyle) {
+            styleCode = `.then(()=>{if (w${componentID}.__owl__.status === ${5 /* DESTROYED */}) {return};w${componentID}.el.style=${tattStyle};});`;
+        }
+        ctx.addLine(`w${componentID}.__updateProps(props${componentID}, extra.fiber, ${scope})${styleCode};`);
+        ctx.addLine(`let pvnode = w${componentID}.__owl__.pvnode;`);
+        if (registerCode) {
+            ctx.addLine(registerCode);
+        }
+        if (ctx.parentNode) {
+            ctx.addLine(`c${ctx.parentNode}.push(pvnode);`);
+        }
+        ctx.addElse();
+        // new component
+        let dynamicFallback = "";
+        if (!value.match(INTERP_REGEXP)) {
+            dynamicFallback = `|| ${ctx.formatExpression(value)}`;
+        }
+        const interpValue = ctx.interpolate(value);
+        ctx.addLine(`let componentKey${componentID} = ${interpValue};`);
+        ctx.addLine(`let W${componentID} = context.constructor.components[componentKey${componentID}] || QWeb.components[componentKey${componentID}]${dynamicFallback};`);
+        // maybe only do this in dev mode...
+        ctx.addLine(`if (!W${componentID}) {throw new Error('Cannot find the definition of component "' + componentKey${componentID} + '"')}`);
+        ctx.addLine(`w${componentID} = new W${componentID}(parent, props${componentID});`);
+        if (transition) {
+            ctx.addLine(`const __patch${componentID} = w${componentID}.__patch;`);
+            ctx.addLine(`w${componentID}.__patch = (t, vn) => {__patch${componentID}.call(w${componentID}, t, vn); if(!w${componentID}.__owl__.transitionInserted){w${componentID}.__owl__.transitionInserted = true;utils.transitionInsert(w${componentID}.__owl__.vnode, '${transition}');}};`);
+        }
+        ctx.addLine(`parent.__owl__.cmap[${templateKey}] = w${componentID}.__owl__.id;`);
+        if (hasSlots) {
+            const clone = node.cloneNode(true);
+            // The next code is a fallback for compatibility reason. It accepts t-set
+            // elements that are direct children with a non empty body as nodes defining
+            // the content of a slot.
+            //
+            // This is wrong, but is necessary to prevent breaking all existing Owl
+            // code using slots. This will be removed in v2.0 someday. Meanwhile,
+            // please use t-set-slot everywhere you need to set the content of a
+            // slot.
+            for (let node of clone.children) {
+                if (node.hasAttribute("t-set") && node.hasChildNodes()) {
+                    node.setAttribute("t-set-slot", node.getAttribute("t-set"));
+                    node.removeAttribute("t-set");
+                }
+            }
+            const slotNodes = Array.from(clone.querySelectorAll("[t-set-slot]"));
+            const slotNames = new Set();
+            const slotId = QWeb.nextSlotId++;
+            ctx.addLine(`w${componentID}.__owl__.slotId = ${slotId};`);
+            if (slotNodes.length) {
+                for (let i = 0, length = slotNodes.length; i < length; i++) {
+                    const slotNode = slotNodes[i];
+                    // check if this is defined in a sub component (in which case it should
+                    // be ignored)
+                    let el = slotNode.parentElement;
+                    let isInSubComponent = false;
+                    while (el !== clone) {
+                        if (el.hasAttribute("t-component") ||
+                            el.tagName[0] === el.tagName[0].toUpperCase()) {
+                            isInSubComponent = true;
+                            break;
+                        }
+                        el = el.parentElement;
+                    }
+                    if (isInSubComponent) {
+                        continue;
+                    }
+                    let key = slotNode.getAttribute("t-set-slot");
+                    if (slotNames.has(key)) {
+                        continue;
+                    }
+                    slotNames.add(key);
+                    slotNode.removeAttribute("t-set-slot");
+                    slotNode.parentElement.removeChild(slotNode);
+                    const slotFn = qweb._compile(`slot_${key}_template`, { elem: slotNode, hasParent: true });
+                    QWeb.slots[`${slotId}_${key}`] = slotFn;
+                }
+            }
+            if (clone.childNodes.length) {
+                const t = clone.ownerDocument.createElement("t");
+                for (let child of Object.values(clone.childNodes)) {
+                    t.appendChild(child);
+                }
+                const slotFn = qweb._compile(`slot_default_template`, { elem: t, hasParent: true });
+                QWeb.slots[`${slotId}_default`] = slotFn;
+            }
+        }
+        ctx.addLine(`let fiber = w${componentID}.__prepare(extra.fiber, ${scope}, () => { const vnode = fiber.vnode; pvnode.sel = vnode.sel; ${createHook}});`);
+        // hack: specify empty remove hook to prevent the node from being removed from the DOM
+        const insertHook = refExpr ? `insert(vn) {${refExpr}},` : "";
+        ctx.addLine(`let pvnode = h('dummy', {key: ${templateKey}, hook: {${insertHook}remove() {},destroy(vn) {${finalizeComponentCode}}}});`);
+        if (registerCode) {
+            ctx.addLine(registerCode);
+        }
+        if (ctx.parentNode) {
+            ctx.addLine(`c${ctx.parentNode}.push(pvnode);`);
+        }
+        ctx.addLine(`w${componentID}.__owl__.pvnode = pvnode;`);
+        ctx.closeIf();
+        if (classObj) {
+            ctx.addLine(`w${componentID}.__owl__.classObj=${classObj};`);
+        }
+        ctx.addLine(`w${componentID}.__owl__.parentLastFiberId = extra.fiber.id;`);
+        return true;
+    },
+});
+
+class Scheduler {
+    constructor(requestAnimationFrame) {
+        this.tasks = [];
+        this.isRunning = false;
+        this.requestAnimationFrame = requestAnimationFrame;
+    }
+    start() {
+        this.isRunning = true;
+        this.scheduleTasks();
+    }
+    stop() {
+        this.isRunning = false;
+    }
+    addFiber(fiber) {
+        // if the fiber was remapped into a larger rendering fiber, it may not be a
+        // root fiber.  But we only want to register root fibers
+        fiber = fiber.root;
+        return new Promise((resolve, reject) => {
+            if (fiber.error) {
+                return reject(fiber.error);
+            }
+            this.tasks.push({
+                fiber,
+                callback: () => {
+                    if (fiber.error) {
+                        return reject(fiber.error);
+                    }
+                    resolve();
+                },
+            });
+            if (!this.isRunning) {
+                this.start();
+            }
+        });
+    }
+    rejectFiber(fiber, reason) {
+        fiber = fiber.root;
+        const index = this.tasks.findIndex((t) => t.fiber === fiber);
+        if (index >= 0) {
+            const [task] = this.tasks.splice(index, 1);
+            fiber.cancel();
+            fiber.error = new Error(reason);
+            task.callback();
+        }
+    }
+    /**
+     * Process all current tasks. This only applies to the fibers that are ready.
+     * Other tasks are left unchanged.
+     */
+    flush() {
+        let tasks = this.tasks;
+        this.tasks = [];
+        tasks = tasks.filter((task) => {
+            if (task.fiber.isCompleted) {
+                task.callback();
+                return false;
+            }
+            if (task.fiber.counter === 0) {
+                if (!task.fiber.error) {
+                    try {
+                        task.fiber.complete();
+                    }
+                    catch (e) {
+                        task.fiber.handleError(e);
+                    }
+                }
+                task.callback();
+                return false;
+            }
+            return true;
+        });
+        this.tasks = tasks.concat(this.tasks);
+        if (this.tasks.length === 0) {
+            this.stop();
+        }
+    }
+    scheduleTasks() {
+        this.requestAnimationFrame(() => {
+            this.flush();
+            if (this.isRunning) {
+                this.scheduleTasks();
+            }
+        });
+    }
+}
+const scheduler = new Scheduler(browser.requestAnimationFrame);
+
+/**
+ * Owl Fiber Class
+ *
+ * Fibers are small abstractions designed to contain all the internal state
+ * associated with a "rendering work unit", relative to a specific component.
+ *
+ * A rendering will cause the creation of a fiber for each impacted components.
+ *
+ * Fibers capture all that necessary information, which is critical to owl
+ * asynchronous rendering pipeline. Fibers can be cancelled, can be in different
+ * states and in general determine the state of the rendering.
+ */
+class Fiber {
+    constructor(parent, component, force, target, position) {
+        this.id = Fiber.nextId++;
+        // isCompleted means that the rendering corresponding to this fiber's work is
+        // done, either because the component has been mounted or patched, or because
+        // fiber has been cancelled.
+        this.isCompleted = false;
+        // the fibers corresponding to component updates (updateProps) need to call
+        // the willPatch and patched hooks from the corresponding component. However,
+        // fibers corresponding to a new component do not need to do that. So, the
+        // shouldPatch hook is the boolean that we check whenever we need to apply
+        // a patch.
+        this.shouldPatch = true;
+        // isRendered is the last state of a fiber. If true, this means that it has
+        // been rendered and is inert (so, it should not be taken into account when
+        // counting the number of active fibers).
+        this.isRendered = false;
+        // the counter number is a critical information. It is only necessary for a
+        // root fiber.  For that fiber, this number counts the number of active sub
+        // fibers.  When that number reaches 0, the fiber can be applied by the
+        // scheduler.
+        this.counter = 0;
+        this.vnode = null;
+        this.child = null;
+        this.sibling = null;
+        this.lastChild = null;
+        this.parent = null;
+        this.component = component;
+        this.force = force;
+        this.target = target;
+        this.position = position;
+        const __owl__ = component.__owl__;
+        this.scope = __owl__.scope;
+        this.root = parent ? parent.root : this;
+        this.parent = parent;
+        let oldFiber = __owl__.currentFiber;
+        if (oldFiber && !oldFiber.isCompleted) {
+            this.force = true;
+            if (oldFiber.root === oldFiber && !parent) {
+                // both oldFiber and this fiber are root fibers
+                this._reuseFiber(oldFiber);
+                return oldFiber;
+            }
+            else {
+                this._remapFiber(oldFiber);
+            }
+        }
+        this.root.counter++;
+        __owl__.currentFiber = this;
+    }
+    /**
+     * When the oldFiber is not completed yet, and both oldFiber and this fiber
+     * are root fibers, we want to reuse the oldFiber instead of creating a new
+     * one. Doing so will guarantee that the initiator(s) of those renderings will
+     * be notified (the promise will resolve) when the last rendering will be done.
+     *
+     * This function thus assumes that oldFiber is a root fiber.
+     */
+    _reuseFiber(oldFiber) {
+        oldFiber.cancel(); // cancel children fibers
+        oldFiber.target = this.target || oldFiber.target;
+        oldFiber.position = this.position || oldFiber.position;
+        oldFiber.isCompleted = false; // keep the root fiber alive
+        oldFiber.isRendered = false; // the fiber has to be re-rendered
+        if (oldFiber.child) {
+            // remove relation to children
+            oldFiber.child.parent = null;
+            oldFiber.child = null;
+            oldFiber.lastChild = null;
+        }
+        oldFiber.counter = 1; // re-initialize counter
+        oldFiber.id = Fiber.nextId++;
+    }
+    /**
+     * In some cases, a rendering initiated at some component can detect that it
+     * should be part of a larger rendering initiated somewhere up the component
+     * tree.  In that case, it needs to cancel the previous rendering and
+     * remap itself as a part of the current parent rendering.
+     */
+    _remapFiber(oldFiber) {
+        oldFiber.cancel();
+        this.shouldPatch = oldFiber.shouldPatch;
+        if (oldFiber === oldFiber.root) {
+            oldFiber.counter++;
+        }
+        if (oldFiber.parent && !this.parent) {
+            // re-map links
+            this.parent = oldFiber.parent;
+            this.root = this.parent.root;
+            this.sibling = oldFiber.sibling;
+            if (this.parent.lastChild === oldFiber) {
+                this.parent.lastChild = this;
+            }
+            if (this.parent.child === oldFiber) {
+                this.parent.child = this;
+            }
+            else {
+                let current = this.parent.child;
+                while (true) {
+                    if (current.sibling === oldFiber) {
+                        current.sibling = this;
+                        break;
+                    }
+                    current = current.sibling;
+                }
+            }
+        }
+    }
+    /**
+     * This function has been taken from
+     * https://medium.com/react-in-depth/the-how-and-why-on-reacts-usage-of-linked-list-in-fiber-67f1014d0eb7
+     */
+    _walk(doWork) {
+        let root = this;
+        let current = this;
+        while (true) {
+            const child = doWork(current);
+            if (child) {
+                current = child;
+                continue;
+            }
+            if (current === root) {
+                return;
+            }
+            while (!current.sibling) {
+                if (!current.parent || current.parent === root) {
+                    return;
+                }
+                current = current.parent;
+            }
+            current = current.sibling;
+        }
+    }
+    /**
+     * Successfully complete the work of the fiber: call the mount or patch hooks
+     * and patch the DOM. This function is called once the fiber and its children
+     * are ready, and the scheduler decides to process it.
+     */
+    complete() {
+        let component = this.component;
+        this.isCompleted = true;
+        const status = component.__owl__.status;
+        if (status === 5 /* DESTROYED */) {
+            return;
+        }
+        // build patchQueue
+        const patchQueue = [];
+        const doWork = function (f) {
+            patchQueue.push(f);
+            return f.child;
+        };
+        this._walk(doWork);
+        const patchLen = patchQueue.length;
+        // call willPatch hook on each fiber of patchQueue
+        if (status === 3 /* MOUNTED */) {
+            for (let i = 0; i < patchLen; i++) {
+                const fiber = patchQueue[i];
+                if (fiber.shouldPatch) {
+                    component = fiber.component;
+                    if (component.__owl__.willPatchCB) {
+                        component.__owl__.willPatchCB();
+                    }
+                    component.willPatch();
+                }
+            }
+        }
+        // call __patch on each fiber of (reversed) patchQueue
+        for (let i = patchLen - 1; i >= 0; i--) {
+            const fiber = patchQueue[i];
+            component = fiber.component;
+            if (fiber.target && i === 0) {
+                let target;
+                if (fiber.position === "self") {
+                    target = fiber.target;
+                    if (target.tagName.toLowerCase() !== fiber.vnode.sel) {
+                        throw new Error(`Cannot attach '${component.constructor.name}' to target node (not same tag name)`);
+                    }
+                    // In self mode, we *know* we are to take possession of the target
+                    // Hence we manually create the corresponding VNode and copy the "key" in data
+                    const selfVnodeData = fiber.vnode.data ? { key: fiber.vnode.data.key } : {};
+                    const selfVnode = h(fiber.vnode.sel, selfVnodeData);
+                    selfVnode.elm = target;
+                    target = selfVnode;
+                }
+                else {
+                    target = component.__owl__.vnode || document.createElement(fiber.vnode.sel);
+                }
+                component.__patch(target, fiber.vnode);
+            }
+            else {
+                if (fiber.shouldPatch) {
+                    component.__patch(component.__owl__.vnode, fiber.vnode);
+                    // When updating a Component's props (in directive),
+                    // the component has a pvnode AND should be patched.
+                    // However, its pvnode.elm may have changed if it is a High Order Component
+                    if (component.__owl__.pvnode) {
+                        component.__owl__.pvnode.elm = component.__owl__.vnode.elm;
+                    }
+                }
+                else {
+                    component.__patch(document.createElement(fiber.vnode.sel), fiber.vnode);
+                    component.__owl__.pvnode.elm = component.__owl__.vnode.elm;
+                }
+            }
+            const compOwl = component.__owl__;
+            if (fiber === compOwl.currentFiber) {
+                compOwl.currentFiber = null;
+            }
+        }
+        // insert into the DOM (mount case)
+        let inDOM = false;
+        if (this.target) {
+            switch (this.position) {
+                case "first-child":
+                    this.target.prepend(this.component.el);
+                    break;
+                case "last-child":
+                    this.target.appendChild(this.component.el);
+                    break;
+            }
+            inDOM = document.body.contains(this.component.el);
+            this.component.env.qweb.trigger("dom-appended");
+        }
+        // call patched/mounted hook on each fiber of (reversed) patchQueue
+        if (status === 3 /* MOUNTED */ || inDOM) {
+            for (let i = patchLen - 1; i >= 0; i--) {
+                const fiber = patchQueue[i];
+                component = fiber.component;
+                if (fiber.shouldPatch && !this.target) {
+                    component.patched();
+                    if (component.__owl__.patchedCB) {
+                        component.__owl__.patchedCB();
+                    }
+                }
+                else {
+                    component.__callMounted();
+                }
+            }
+        }
+        else {
+            for (let i = patchLen - 1; i >= 0; i--) {
+                const fiber = patchQueue[i];
+                component = fiber.component;
+                component.__owl__.status = 4 /* UNMOUNTED */;
+            }
+        }
+    }
+    /**
+     * Cancel a fiber and all its children.
+     */
+    cancel() {
+        this._walk((f) => {
+            if (!f.isRendered) {
+                f.root.counter--;
+            }
+            f.isCompleted = true;
+            return f.child;
+        });
+    }
+    /**
+     * This is the global error handler for errors occurring in Owl main lifecycle
+     * methods.  Caught errors are triggered on the QWeb instance, and are
+     * potentially given to some parent component which implements `catchError`.
+     *
+     * If there are no such component, we destroy everything. This is better than
+     * being in a corrupted state.
+     */
+    handleError(error) {
+        let component = this.component;
+        this.vnode = component.__owl__.vnode || h("div");
+        const qweb = component.env.qweb;
+        let root = component;
+        let canCatch = false;
+        while (component && !(canCatch = !!component.catchError)) {
+            root = component;
+            component = component.__owl__.parent;
+        }
+        qweb.trigger("error", error);
+        if (canCatch) {
+            component.catchError(error);
+        }
+        else {
+            // the 3 next lines aim to mark the root fiber as being in error, and
+            // to force it to end, without waiting for its children
+            this.root.counter = 0;
+            this.root.error = error;
+            scheduler.flush();
+            root.destroy();
+        }
+    }
+}
+Fiber.nextId = 1;
+
+//------------------------------------------------------------------------------
+// Prop validation helper
+//------------------------------------------------------------------------------
+/**
+ * Validate the component props (or next props) against the (static) props
+ * description.  This is potentially an expensive operation: it may needs to
+ * visit recursively the props and all the children to check if they are valid.
+ * This is why it is only done in 'dev' mode.
+ */
+QWeb.utils.validateProps = function (Widget, props) {
+    const propsDef = Widget.props;
+    if (propsDef instanceof Array) {
+        // list of strings (prop names)
+        for (let i = 0, l = propsDef.length; i < l; i++) {
+            const propName = propsDef[i];
+            if (propName[propName.length - 1] === "?") {
+                // optional prop
+                break;
+            }
+            if (!(propName in props)) {
+                throw new Error(`Missing props '${propsDef[i]}' (component '${Widget.name}')`);
+            }
+        }
+        for (let key in props) {
+            if (!propsDef.includes(key) && !propsDef.includes(key + "?")) {
+                throw new Error(`Unknown prop '${key}' given to component '${Widget.name}'`);
+            }
+        }
+    }
+    else if (propsDef) {
+        // propsDef is an object now
+        for (let propName in propsDef) {
+            if (props[propName] === undefined) {
+                if (propsDef[propName] && !propsDef[propName].optional) {
+                    throw new Error(`Missing props '${propName}' (component '${Widget.name}')`);
+                }
+                else {
+                    continue;
+                }
+            }
+            let isValid;
+            try {
+                isValid = isValidProp(props[propName], propsDef[propName]);
+            }
+            catch (e) {
+                e.message = `Invalid prop '${propName}' in component ${Widget.name} (${e.message})`;
+                throw e;
+            }
+            if (!isValid) {
+                throw new Error(`Invalid Prop '${propName}' in component '${Widget.name}'`);
+            }
+        }
+        for (let propName in props) {
+            if (!(propName in propsDef)) {
+                throw new Error(`Unknown prop '${propName}' given to component '${Widget.name}'`);
+            }
+        }
+    }
+};
+/**
+ * Check if an invidual prop value matches its (static) prop definition
+ */
+function isValidProp(prop, propDef) {
+    if (propDef === true) {
+        return true;
+    }
+    if (typeof propDef === "function") {
+        // Check if a value is constructed by some Constructor.  Note that there is a
+        // slight abuse of language: we want to consider primitive values as well.
+        //
+        // So, even though 1 is not an instance of Number, we want to consider that
+        // it is valid.
+        if (typeof prop === "object") {
+            return prop instanceof propDef;
+        }
+        return typeof prop === propDef.name.toLowerCase();
+    }
+    else if (propDef instanceof Array) {
+        // If this code is executed, this means that we want to check if a prop
+        // matches at least one of its descriptor.
+        let result = false;
+        for (let i = 0, iLen = propDef.length; i < iLen; i++) {
+            result = result || isValidProp(prop, propDef[i]);
+        }
+        return result;
+    }
+    // propsDef is an object
+    if (propDef.optional && prop === undefined) {
+        return true;
+    }
+    let result = propDef.type ? isValidProp(prop, propDef.type) : true;
+    if (propDef.validate) {
+        result = result && propDef.validate(prop);
+    }
+    if (propDef.type === Array && propDef.element) {
+        for (let i = 0, iLen = prop.length; i < iLen; i++) {
+            result = result && isValidProp(prop[i], propDef.element);
+        }
+    }
+    if (propDef.type === Object && propDef.shape) {
+        const shape = propDef.shape;
+        for (let key in shape) {
+            result = result && isValidProp(prop[key], shape[key]);
+        }
+        if (result) {
+            for (let propName in prop) {
+                if (!(propName in shape)) {
+                    throw new Error(`unknown prop '${propName}'`);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * Owl Style System
+ *
+ * This files contains the Owl code related to processing (extended) css strings
+ * and creating/adding <style> tags to the document head.
+ */
+const STYLESHEETS = {};
+function processSheet(str) {
+    const tokens = str.split(/(\{|\}|;)/).map((s) => s.trim());
+    const selectorStack = [];
+    const parts = [];
+    let rules = [];
+    function generateSelector(stackIndex, parentSelector) {
+        const parts = [];
+        for (const selector of selectorStack[stackIndex]) {
+            let part = (parentSelector && parentSelector + " " + selector) || selector;
+            if (part.includes("&")) {
+                part = selector.replace(/&/g, parentSelector || "");
+            }
+            if (stackIndex < selectorStack.length - 1) {
+                part = generateSelector(stackIndex + 1, part);
+            }
+            parts.push(part);
+        }
+        return parts.join(", ");
+    }
+    function generateRules() {
+        if (rules.length) {
+            parts.push(generateSelector(0) + " {");
+            parts.push(...rules);
+            parts.push("}");
+            rules = [];
+        }
+    }
+    while (tokens.length) {
+        let token = tokens.shift();
+        if (token === "}") {
+            generateRules();
+            selectorStack.pop();
+        }
+        else {
+            if (tokens[0] === "{") {
+                generateRules();
+                selectorStack.push(token.split(/\s*,\s*/));
+                tokens.shift();
+            }
+            if (tokens[0] === ";") {
+                rules.push("  " + token + ";");
+            }
+        }
+    }
+    return parts.join("\n");
+}
+function registerSheet(id, css) {
+    const sheet = document.createElement("style");
+    sheet.innerHTML = processSheet(css);
+    STYLESHEETS[id] = sheet;
+}
+function activateSheet(id, name) {
+    const sheet = STYLESHEETS[id];
+    if (!sheet) {
+        throw new Error(`Invalid css stylesheet for component '${name}'. Did you forget to use the 'css' tag helper?`);
+    }
+    sheet.setAttribute("component", name);
+    document.head.appendChild(sheet);
+}
+
+var STATUS;
+(function (STATUS) {
+    STATUS[STATUS["CREATED"] = 0] = "CREATED";
+    STATUS[STATUS["WILLSTARTED"] = 1] = "WILLSTARTED";
+    STATUS[STATUS["RENDERED"] = 2] = "RENDERED";
+    STATUS[STATUS["MOUNTED"] = 3] = "MOUNTED";
+    STATUS[STATUS["UNMOUNTED"] = 4] = "UNMOUNTED";
+    STATUS[STATUS["DESTROYED"] = 5] = "DESTROYED";
+})(STATUS || (STATUS = {}));
+const portalSymbol = Symbol("portal"); // FIXME
+//------------------------------------------------------------------------------
+// Component
+//------------------------------------------------------------------------------
+let nextId = 1;
+class Component {
+    //--------------------------------------------------------------------------
+    // Lifecycle
+    //--------------------------------------------------------------------------
+    /**
+     * Creates an instance of Component.
+     *
+     * Note that most of the time, only the root component needs to be created by
+     * hand.  Other components should be created automatically by the framework (with
+     * the t-component directive in a template)
+     */
+    constructor(parent, props) {
+        Component.current = this;
+        let constr = this.constructor;
+        const defaultProps = constr.defaultProps;
+        if (defaultProps) {
+            props = props || {};
+            this.__applyDefaultProps(props, defaultProps);
+        }
+        this.props = props;
+        if (QWeb.dev) {
+            QWeb.utils.validateProps(constr, this.props);
+        }
+        const id = nextId++;
+        let depth;
+        if (parent) {
+            this.env = parent.env;
+            const __powl__ = parent.__owl__;
+            __powl__.children[id] = this;
+            depth = __powl__.depth + 1;
+        }
+        else {
+            // we are the root component
+            this.env = this.constructor.env;
+            if (!this.env.qweb) {
+                this.env.qweb = new QWeb();
+            }
+            // TODO: remove this in owl 2.0
+            if (!this.env.browser) {
+                this.env.browser = browser;
+            }
+            this.env.qweb.on("update", this, () => {
+                switch (this.__owl__.status) {
+                    case 3 /* MOUNTED */:
+                        this.render(true);
+                        break;
+                    case 5 /* DESTROYED */:
+                        // this is unlikely to happen, but if a root widget is destroyed,
+                        // we want to remove our subscription.  The usual way to do that
+                        // would be to perform some check in the destroy method, but since
+                        // it is very performance sensitive, and since this is a rare event,
+                        // we simply do it lazily
+                        this.env.qweb.off("update", this);
+                        break;
+                }
+            });
+            depth = 0;
+        }
+        const qweb = this.env.qweb;
+        const template = constr.template || this.__getTemplate(qweb);
+        this.__owl__ = {
+            id: id,
+            depth: depth,
+            vnode: null,
+            pvnode: null,
+            status: 0 /* CREATED */,
+            parent: parent || null,
+            children: {},
+            cmap: {},
+            currentFiber: null,
+            parentLastFiberId: 0,
+            boundHandlers: {},
+            mountedCB: null,
+            willUnmountCB: null,
+            willPatchCB: null,
+            patchedCB: null,
+            willStartCB: null,
+            willUpdatePropsCB: null,
+            observer: null,
+            renderFn: qweb.render.bind(qweb, template),
+            classObj: null,
+            refs: null,
+            scope: null,
+        };
+        if (constr.style) {
+            this.__applyStyles(constr);
+        }
+        this.setup();
+    }
+    /**
+     * The `el` is the root element of the component.  Note that it could be null:
+     * this is the case if the component is not mounted yet, or is destroyed.
+     */
+    get el() {
+        return this.__owl__.vnode ? this.__owl__.vnode.elm : null;
+    }
+    /**
+     * setup is run just after the component is constructed. This is the standard
+     * location where the component can setup its hooks. It has some advantages
+     * over the constructor:
+     *  - it can be patched (useful in odoo ecosystem)
+     *  - it does not need to propagate the arguments to the super call
+     *
+     * Note: this method should not be called manually.
+     */
+    setup() { }
+    /**
+     * willStart is an asynchronous hook that can be implemented to perform some
+     * action before the initial rendering of a component.
+     *
+     * It will be called exactly once before the initial rendering. It is useful
+     * in some cases, for example, to load external assets (such as a JS library)
+     * before the component is rendered.
+     *
+     * Note that a slow willStart method will slow down the rendering of the user
+     * interface.  Therefore, some effort should be made to make this method as
+     * fast as possible.
+     *
+     * Note: this method should not be called manually.
+     */
+    async willStart() { }
+    /**
+     * mounted is a hook that is called each time a component is attached to the
+     * DOM. This is a good place to add some listeners, or to interact with the
+     * DOM, if the component needs to perform some measure for example.
+     *
+     * Note: this method should not be called manually.
+     *
+     * @see willUnmount
+     */
+    mounted() { }
+    /**
+     * The willUpdateProps is an asynchronous hook, called just before new props
+     * are set. This is useful if the component needs some asynchronous task
+     * performed, depending on the props (for example, assuming that the props are
+     * some record Id, fetching the record data).
+     *
+     * This hook is not called during the first render (but willStart is called
+     * and performs a similar job).
+     */
+    async willUpdateProps(nextProps) { }
+    /**
+     * The willPatch hook is called just before the DOM patching process starts.
+     * It is not called on the initial render.  This is useful to get some
+     * information which are in the DOM.  For example, the current position of the
+     * scrollbar
+     */
+    willPatch() { }
+    /**
+     * This hook is called whenever a component did actually update its props,
+     * state or env.
+     *
+     * This method is not called on the initial render. It is useful to interact
+     * with the DOM (for example, through an external library) whenever the
+     * component was updated.
+     *
+     * Updating the component state in this hook is possible, but not encouraged.
+     * One need to be careful, because updates here will cause rerender, which in
+     * turn will cause other calls to updated. So, we need to be particularly
+     * careful at avoiding endless cycles.
+     */
+    patched() { }
+    /**
+     * willUnmount is a hook that is called each time just before a component is
+     * unmounted from the DOM. This is a good place to remove some listeners, for
+     * example.
+     *
+     * Note: this method should not be called manually.
+     *
+     * @see mounted
+     */
+    willUnmount() { }
+    //--------------------------------------------------------------------------
+    // Public
+    //--------------------------------------------------------------------------
+    /**
+     * Mount the component to a target element.
+     *
+     * This should only be done if the component was created manually. Components
+     * created declaratively in templates are managed by the Owl system.
+     *
+     * Note that a component can be mounted an unmounted several times
+     */
+    async mount(target, options = {}) {
+        if (!(target instanceof HTMLElement || target instanceof DocumentFragment)) {
+            let message = `Component '${this.constructor.name}' cannot be mounted: the target is not a valid DOM node.`;
+            message += `\nMaybe the DOM is not ready yet? (in that case, you can use owl.utils.whenReady)`;
+            throw new Error(message);
+        }
+        const position = options.position || "last-child";
+        const __owl__ = this.__owl__;
+        const currentFiber = __owl__.currentFiber;
+        switch (__owl__.status) {
+            case 0 /* CREATED */: {
+                const fiber = new Fiber(null, this, true, target, position);
+                fiber.shouldPatch = false;
+                this.__prepareAndRender(fiber, () => { });
+                return scheduler.addFiber(fiber);
+            }
+            case 1 /* WILLSTARTED */:
+            case 2 /* RENDERED */:
+                currentFiber.target = target;
+                currentFiber.position = position;
+                return scheduler.addFiber(currentFiber);
+            case 4 /* UNMOUNTED */: {
+                const fiber = new Fiber(null, this, true, target, position);
+                fiber.shouldPatch = false;
+                this.__render(fiber);
+                return scheduler.addFiber(fiber);
+            }
+            case 3 /* MOUNTED */: {
+                if (position !== "self" && this.el.parentNode !== target) {
+                    const fiber = new Fiber(null, this, true, target, position);
+                    fiber.shouldPatch = false;
+                    this.__render(fiber);
+                    return scheduler.addFiber(fiber);
+                }
+                else {
+                    return Promise.resolve();
+                }
+            }
+            case 5 /* DESTROYED */:
+                throw new Error("Cannot mount a destroyed component");
+        }
+    }
+    /**
+     * The unmount method is the opposite of the mount method.  It is useful
+     * to call willUnmount calls and remove the component from the DOM.
+     */
+    unmount() {
+        if (this.__owl__.status === 3 /* MOUNTED */) {
+            this.__callWillUnmount();
+            this.el.remove();
+        }
+    }
+    /**
+     * The render method is the main entry point to render a component (once it
+     * is ready. This method is not initially called when the component is
+     * rendered the first time).
+     *
+     * This method will cause all its sub components to potentially rerender
+     * themselves.  Note that `render` is not called if a component is updated via
+     * its props.
+     */
+    async render(force = false) {
+        const __owl__ = this.__owl__;
+        const currentFiber = __owl__.currentFiber;
+        if (!__owl__.vnode && !currentFiber) {
+            return;
+        }
+        if (currentFiber && !currentFiber.isRendered && !currentFiber.isCompleted) {
+            return scheduler.addFiber(currentFiber.root);
+        }
+        // if we aren't mounted at this point, it implies that there is a
+        // currentFiber that is already rendered (isRendered is true), so we are
+        // about to be mounted
+        const status = __owl__.status;
+        const fiber = new Fiber(null, this, force, null, null);
+        Promise.resolve().then(() => {
+            if (__owl__.status === 3 /* MOUNTED */ || status !== 3 /* MOUNTED */) {
+                if (fiber.isCompleted || fiber.isRendered) {
+                    return;
+                }
+                this.__render(fiber);
+            }
+            else {
+                // we were mounted when render was called, but we aren't anymore, so we
+                // were actually about to be unmounted ; we can thus forget about this
+                // fiber
+                fiber.isCompleted = true;
+                __owl__.currentFiber = null;
+            }
+        });
+        return scheduler.addFiber(fiber);
+    }
+    /**
+     * Destroy the component.  This operation is quite complex:
+     *  - it recursively destroy all children
+     *  - call the willUnmount hooks if necessary
+     *  - remove the dom node from the dom
+     *
+     * This should only be called manually if you created the component.  Most
+     * components will be automatically destroyed.
+     */
+    destroy() {
+        const __owl__ = this.__owl__;
+        if (__owl__.status !== 5 /* DESTROYED */) {
+            const el = this.el;
+            this.__destroy(__owl__.parent);
+            if (el) {
+                el.remove();
+            }
+        }
+    }
+    /**
+     * This method is called by the component system whenever its props are
+     * updated. If it returns true, then the component will be rendered.
+     * Otherwise, it will skip the rendering (also, its props will not be updated)
+     */
+    shouldUpdate(nextProps) {
+        return true;
+    }
+    /**
+     * Emit a custom event of type 'eventType' with the given 'payload' on the
+     * component's el, if it exists. However, note that the event will only bubble
+     * up to the parent DOM nodes. Thus, it must be called between mounted() and
+     * willUnmount().
+     */
+    trigger(eventType, payload) {
+        this.__trigger(this, eventType, payload);
+    }
+    //--------------------------------------------------------------------------
+    // Private
+    //--------------------------------------------------------------------------
+    /**
+     * Private helper to perform a full destroy, from the point of view of an Owl
+     * component. It does not remove the el (this is done only once on the top
+     * level destroyed component, for performance reasons).
+     *
+     * The job of this method is mostly to call willUnmount hooks, and to perform
+     * all necessary internal cleanup.
+     *
+     * Note that it does not call the __callWillUnmount method to avoid visiting
+     * all children many times.
+     */
+    __destroy(parent) {
+        const __owl__ = this.__owl__;
+        if (__owl__.status === 3 /* MOUNTED */) {
+            if (__owl__.willUnmountCB) {
+                __owl__.willUnmountCB();
+            }
+            this.willUnmount();
+            __owl__.status = 4 /* UNMOUNTED */;
+        }
+        const children = __owl__.children;
+        for (let key in children) {
+            children[key].__destroy(this);
+        }
+        if (parent) {
+            let id = __owl__.id;
+            delete parent.__owl__.children[id];
+            __owl__.parent = null;
+        }
+        __owl__.status = 5 /* DESTROYED */;
+        delete __owl__.vnode;
+        if (__owl__.currentFiber) {
+            __owl__.currentFiber.isCompleted = true;
+        }
+    }
+    __callMounted() {
+        const __owl__ = this.__owl__;
+        __owl__.status = 3 /* MOUNTED */;
+        __owl__.currentFiber = null;
+        this.mounted();
+        if (__owl__.mountedCB) {
+            __owl__.mountedCB();
+        }
+    }
+    __callWillUnmount() {
+        const __owl__ = this.__owl__;
+        if (__owl__.willUnmountCB) {
+            __owl__.willUnmountCB();
+        }
+        this.willUnmount();
+        __owl__.status = 4 /* UNMOUNTED */;
+        if (__owl__.currentFiber) {
+            __owl__.currentFiber.isCompleted = true;
+            __owl__.currentFiber.root.counter = 0;
+        }
+        const children = __owl__.children;
+        for (let id in children) {
+            const comp = children[id];
+            if (comp.__owl__.status === 3 /* MOUNTED */) {
+                comp.__callWillUnmount();
+            }
+        }
+    }
+    /**
+     * Private trigger method, allows to choose the component which triggered
+     * the event in the first place
+     */
+    __trigger(component, eventType, payload) {
+        if (this.el) {
+            const ev = new OwlEvent(component, eventType, {
+                bubbles: true,
+                cancelable: true,
+                detail: payload,
+            });
+            const triggerHook = this.env[portalSymbol];
+            if (triggerHook) {
+                triggerHook(ev);
+            }
+            this.el.dispatchEvent(ev);
+        }
+    }
+    /**
+     * The __updateProps method is called by the t-component directive whenever
+     * it updates a component (so, when the parent template is rerendered).
+     */
+    async __updateProps(nextProps, parentFiber, scope) {
+        this.__owl__.scope = scope;
+        const shouldUpdate = parentFiber.force || this.shouldUpdate(nextProps);
+        if (shouldUpdate) {
+            const __owl__ = this.__owl__;
+            const fiber = new Fiber(parentFiber, this, parentFiber.force, null, null);
+            if (!parentFiber.child) {
+                parentFiber.child = fiber;
+            }
+            else {
+                parentFiber.lastChild.sibling = fiber;
+            }
+            parentFiber.lastChild = fiber;
+            const defaultProps = this.constructor.defaultProps;
+            if (defaultProps) {
+                this.__applyDefaultProps(nextProps, defaultProps);
+            }
+            if (QWeb.dev) {
+                QWeb.utils.validateProps(this.constructor, nextProps);
+            }
+            await Promise.all([
+                this.willUpdateProps(nextProps),
+                __owl__.willUpdatePropsCB && __owl__.willUpdatePropsCB(nextProps),
+            ]);
+            if (fiber.isCompleted) {
+                return;
+            }
+            this.props = nextProps;
+            this.__render(fiber);
+        }
+    }
+    /**
+     * Main patching method. We call the virtual dom patch method here to convert
+     * a virtual dom vnode into some actual dom.
+     */
+    __patch(target, vnode) {
+        this.__owl__.vnode = patch(target, vnode);
+    }
+    /**
+     * The __prepare method is only called by the t-component directive, when a
+     * subcomponent is created. It gets its scope, if any, from the
+     * parent template.
+     */
+    __prepare(parentFiber, scope, cb) {
+        this.__owl__.scope = scope;
+        const fiber = new Fiber(parentFiber, this, parentFiber.force, null, null);
+        fiber.shouldPatch = false;
+        if (!parentFiber.child) {
+            parentFiber.child = fiber;
+        }
+        else {
+            parentFiber.lastChild.sibling = fiber;
+        }
+        parentFiber.lastChild = fiber;
+        this.__prepareAndRender(fiber, cb);
+        return fiber;
+    }
+    /**
+     * Apply the stylesheets defined by the component. Note that we need to make
+     * sure all inherited stylesheets are applied as well.  We then delete the
+     * `style` key from the constructor to make sure we do not apply it again.
+     */
+    __applyStyles(constr) {
+        while (constr && constr.style) {
+            if (constr.hasOwnProperty("style")) {
+                activateSheet(constr.style, constr.name);
+                delete constr.style;
+            }
+            constr = constr.__proto__;
+        }
+    }
+    __getTemplate(qweb) {
+        let p = this.constructor;
+        if (!p.hasOwnProperty("_template")) {
+            // here, the component and none of its superclasses defines a static `template`
+            // key. So we fall back on looking for a template matching its name (or
+            // one of its subclass).
+            let template = p.name;
+            while (!(template in qweb.templates) && p !== Component) {
+                p = p.__proto__;
+                template = p.name;
+            }
+            if (p === Component) {
+                throw new Error(`Could not find template for component "${this.constructor.name}"`);
+            }
+            else {
+                p._template = template;
+            }
+        }
+        return p._template;
+    }
+    async __prepareAndRender(fiber, cb) {
+        try {
+            const proms = Promise.all([
+                this.willStart(),
+                this.__owl__.willStartCB && this.__owl__.willStartCB(),
+            ]);
+            this.__owl__.status = 1 /* WILLSTARTED */;
+            await proms;
+            if (this.__owl__.status === 5 /* DESTROYED */) {
+                return Promise.resolve();
+            }
+        }
+        catch (e) {
+            fiber.handleError(e);
+            return Promise.resolve();
+        }
+        if (!fiber.isCompleted) {
+            this.__render(fiber);
+            this.__owl__.status = 2 /* RENDERED */;
+            cb();
+        }
+    }
+    __render(fiber) {
+        const __owl__ = this.__owl__;
+        if (__owl__.observer) {
+            __owl__.observer.allowMutations = false;
+        }
+        let error;
+        try {
+            let vnode = __owl__.renderFn(this, {
+                handlers: __owl__.boundHandlers,
+                fiber: fiber,
+            });
+            // we iterate over the children to detect those that no longer belong to the
+            // current rendering: those ones, if not mounted yet, can (and have to) be
+            // destroyed right now, because they are not in the DOM, and thus we won't
+            // be notified later on (when patching), that they are removed from the DOM
+            for (let childKey in __owl__.children) {
+                const child = __owl__.children[childKey];
+                const childOwl = child.__owl__;
+                if (childOwl.status !== 3 /* MOUNTED */ && childOwl.parentLastFiberId < fiber.id) {
+                    // we only do here a "soft" destroy, meaning that we leave the child
+                    // dom node alone, without removing it.  Most of the time, it does not
+                    // matter, because the child component is already unmounted.  However,
+                    // if some of its parent have been unmounted, the child could actually
+                    // still be attached to its parent, and this may be important if we
+                    // want to remount the parent, because the vdom need to match the
+                    // actual DOM
+                    child.__destroy(childOwl.parent);
+                    if (childOwl.pvnode) {
+                        // we remove the key here to make sure that the patching algorithm
+                        // is able to make the difference between this pvnode and an eventual
+                        // other instance of the same component
+                        delete childOwl.pvnode.key;
+                        // Since the component has been unmounted, we do not want to actually
+                        // call a remove hook.  This is pretty important, since the t-component
+                        // directive actually disabled it, so the vdom algorithm will just
+                        // not remove the child elm if we don't remove the hook.
+                        delete childOwl.pvnode.data.hook.remove;
+                    }
+                }
+            }
+            if (!vnode) {
+                throw new Error(`Rendering '${this.constructor.name}' did not return anything`);
+            }
+            fiber.vnode = vnode;
+            // we apply here the class information described on the component by the
+            // template (so, something like <MyComponent class="..."/>) to the actual
+            // root vnode
+            if (__owl__.classObj) {
+                const data = vnode.data;
+                data.class = Object.assign(data.class || {}, __owl__.classObj);
+            }
+        }
+        catch (e) {
+            error = e;
+        }
+        if (__owl__.observer) {
+            __owl__.observer.allowMutations = true;
+        }
+        fiber.root.counter--;
+        fiber.isRendered = true;
+        if (error) {
+            fiber.handleError(error);
+        }
+    }
+    /**
+     * Apply default props (only top level).
+     *
+     * Note that this method does modify in place the props
+     */
+    __applyDefaultProps(props, defaultProps) {
+        for (let propName in defaultProps) {
+            if (props[propName] === undefined) {
+                props[propName] = defaultProps[propName];
+            }
+        }
+    }
+}
+Component.template = null;
+Component._template = null;
+Component.current = null;
+Component.components = {};
+Component.env = {};
+// expose scheduler s.t. it can be mocked for testing purposes
+Component.scheduler = scheduler;
+async function mount(C, params) {
+    const { env, props, target } = params;
+    let origEnv = C.hasOwnProperty("env") ? C.env : null;
+    if (env) {
+        C.env = env;
+    }
+    const component = new C(null, props);
+    if (origEnv) {
+        C.env = origEnv;
+    }
+    else {
+        delete C.env;
+    }
+    const position = params.position || "last-child";
+    await component.mount(target, { position });
+    return component;
+}
+
+/**
+ * The `Context` object provides a way to share data between an arbitrary number
+ * of component. Usually, data is passed from a parent to its children component,
+ * but when we have to deal with some mostly global information, this can be
+ * annoying, since each component will need to pass the information to each
+ * children, even though some or most of them will not use the information.
+ *
+ * With a `Context` object, each component can subscribe (with the `useContext`
+ * hook) to its state, and will be updated whenever the context state is updated.
+ */
+function partitionBy(arr, fn) {
+    let lastGroup = false;
+    let lastValue;
+    return arr.reduce((acc, cur) => {
+        let curVal = fn(cur);
+        if (lastGroup) {
+            if (curVal === lastValue) {
+                lastGroup.push(cur);
+            }
+            else {
+                lastGroup = false;
+            }
+        }
+        if (!lastGroup) {
+            lastGroup = [cur];
+            acc.push(lastGroup);
+        }
+        lastValue = curVal;
+        return acc;
+    }, []);
+}
+class Context extends EventBus {
+    constructor(state = {}) {
+        super();
+        this.rev = 1;
+        // mapping from component id to last observed context id
+        this.mapping = {};
+        this.observer = new Observer();
+        this.observer.notifyCB = () => {
+            // notify components in the next microtask tick to ensure that subscribers
+            // are notified only once for all changes that occur in the same micro tick
+            let rev = this.rev;
+            return Promise.resolve().then(() => {
+                if (rev === this.rev) {
+                    this.__notifyComponents();
+                }
+            });
+        };
+        this.state = this.observer.observe(state);
+        this.subscriptions.update = [];
+    }
+    /**
+     * Instead of using trigger to emit an update event, we actually implement
+     * our own function to do that.  The reason is that we need to be smarter than
+     * a simple trigger function: we need to wait for parent components to be
+     * done before doing children components.  More precisely, if an update
+     * as an effect of destroying a children, we do not want to call any code
+     * from the child, and certainly not render it.
+     *
+     * This method implements a simple grouping algorithm by depth. If we have
+     * connected components of depths [2, 4,4,4,4, 3,8,8], the Context will notify
+     * them in the following groups: [2], [4,4,4,4], [3], [8,8]. Each group will
+     * be updated sequentially, but each components in a given group will be done in
+     * parallel.
+     *
+     * This is a very simple algorithm, but it avoids checking if a given
+     * component is a child of another.
+     */
+    async __notifyComponents() {
+        const rev = ++this.rev;
+        const subscriptions = this.subscriptions.update;
+        const groups = partitionBy(subscriptions, (s) => (s.owner ? s.owner.__owl__.depth : -1));
+        for (let group of groups) {
+            const proms = group.map((sub) => sub.callback.call(sub.owner, rev));
+            // at this point, each component in the current group has registered a
+            // top level fiber in the scheduler. It could happen that rendering these
+            // components is done (if they have no children).  This is why we manually
+            // flush the scheduler.  This will force the scheduler to check
+            // immediately if they are done, which will cause their rendering
+            // promise to resolve earlier, which means that there is a chance of
+            // processing the next group in the same frame.
+            scheduler.flush();
+            await Promise.all(proms);
+        }
+    }
+}
+/**
+ * The`useContext` hook is the normal way for a component to register themselve
+ * to context state changes. The `useContext` method returns the context state
+ */
+function useContext(ctx) {
+    const component = Component.current;
+    return useContextWithCB(ctx, component, component.render.bind(component));
+}
+function useContextWithCB(ctx, component, method) {
+    const __owl__ = component.__owl__;
+    const id = __owl__.id;
+    const mapping = ctx.mapping;
+    if (id in mapping) {
+        return ctx.state;
+    }
+    if (!__owl__.observer) {
+        __owl__.observer = new Observer();
+        __owl__.observer.notifyCB = component.render.bind(component);
+    }
+    mapping[id] = 0;
+    const renderFn = __owl__.renderFn;
+    __owl__.renderFn = function (comp, params) {
+        mapping[id] = ctx.rev;
+        return renderFn(comp, params);
+    };
+    ctx.on("update", component, async (contextRev) => {
+        if (mapping[id] < contextRev) {
+            mapping[id] = contextRev;
+            await method();
+        }
+    });
+    const __destroy = component.__destroy;
+    component.__destroy = (parent) => {
+        ctx.off("update", component);
+        delete mapping[id];
+        __destroy.call(component, parent);
+    };
+    return ctx.state;
+}
+
+/**
+ * Owl Hook System
+ *
+ * This file introduces the concept of hooks, similar to React or Vue hooks.
+ * We have currently an implementation of:
+ * - useState (reactive state)
+ * - onMounted
+ * - onWillUnmount
+ * - useRef
+ */
+// -----------------------------------------------------------------------------
+// useState
+// -----------------------------------------------------------------------------
+/**
+ * This is the main way a component can be made reactive.  The useState hook
+ * will return an observed object (or array).  Changes to that value will then
+ * trigger a rerendering of the current component.
+ */
+function useState(state) {
+    const component = Component.current;
+    const __owl__ = component.__owl__;
+    if (!__owl__.observer) {
+        __owl__.observer = new Observer();
+        __owl__.observer.notifyCB = component.render.bind(component);
+    }
+    return __owl__.observer.observe(state);
+}
+// -----------------------------------------------------------------------------
+// Life cycle hooks
+// -----------------------------------------------------------------------------
+function makeLifecycleHook(method, reverse = false) {
+    if (reverse) {
+        return function (cb) {
+            const component = Component.current;
+            if (component.__owl__[method]) {
+                const current = component.__owl__[method];
+                component.__owl__[method] = function () {
+                    current.call(component);
+                    cb.call(component);
+                };
+            }
+            else {
+                component.__owl__[method] = cb;
+            }
+        };
+    }
+    else {
+        return function (cb) {
+            const component = Component.current;
+            if (component.__owl__[method]) {
+                const current = component.__owl__[method];
+                component.__owl__[method] = function () {
+                    cb.call(component);
+                    current.call(component);
+                };
+            }
+            else {
+                component.__owl__[method] = cb;
+            }
+        };
+    }
+}
+function makeAsyncHook(method) {
+    return function (cb) {
+        const component = Component.current;
+        if (component.__owl__[method]) {
+            const current = component.__owl__[method];
+            component.__owl__[method] = function (...args) {
+                return Promise.all([current.call(component, ...args), cb.call(component, ...args)]);
+            };
+        }
+        else {
+            component.__owl__[method] = cb;
+        }
+    };
+}
+const onMounted = makeLifecycleHook("mountedCB", true);
+const onWillUnmount = makeLifecycleHook("willUnmountCB");
+const onWillPatch = makeLifecycleHook("willPatchCB");
+const onPatched = makeLifecycleHook("patchedCB", true);
+const onWillStart = makeAsyncHook("willStartCB");
+const onWillUpdateProps = makeAsyncHook("willUpdatePropsCB");
+function useRef(name) {
+    const __owl__ = Component.current.__owl__;
+    return {
+        get el() {
+            const val = __owl__.refs && __owl__.refs[name];
+            if (val instanceof HTMLElement) {
+                return val;
+            }
+            else if (val instanceof Component) {
+                return val.el;
+            }
+            return null;
+        },
+        get comp() {
+            const val = __owl__.refs && __owl__.refs[name];
+            return val instanceof Component ? val : null;
+        },
+    };
+}
+// -----------------------------------------------------------------------------
+// "Builder" hooks
+// -----------------------------------------------------------------------------
+/**
+ * This hook is useful as a building block for some customized hooks, that may
+ * need a reference to the component calling them.
+ */
+function useComponent() {
+    return Component.current;
+}
+/**
+ * This hook is useful as a building block for some customized hooks, that may
+ * need a reference to the env of the component calling them.
+ */
+function useEnv() {
+    return Component.current.env;
+}
+// -----------------------------------------------------------------------------
+// useSubEnv
+// -----------------------------------------------------------------------------
+/**
+ * This hook is a simple way to let components use a sub environment.  Note that
+ * like for all hooks, it is important that this is only called in the
+ * constructor method.
+ */
+function useSubEnv(nextEnv) {
+    const component = Component.current;
+    component.env = Object.assign(Object.create(component.env), nextEnv);
+}
+// -----------------------------------------------------------------------------
+// useExternalListener
+// -----------------------------------------------------------------------------
+/**
+ * When a component needs to listen to DOM Events on element(s) that are not
+ * part of his hierarchy, we can use the `useExternalListener` hook.
+ * It will correctly add and remove the event listener, whenever the
+ * component is mounted and unmounted.
+ *
+ * Example:
+ *  a menu needs to listen to the click on window to be closed automatically
+ *
+ * Usage:
+ *  in the constructor of the OWL component that needs to be notified,
+ *  `useExternalListener(window, 'click', this._doSomething);`
+ * */
+function useExternalListener(target, eventName, handler, eventParams) {
+    const boundHandler = handler.bind(Component.current);
+    onMounted(() => target.addEventListener(eventName, boundHandler, eventParams));
+    onWillUnmount(() => target.removeEventListener(eventName, boundHandler, eventParams));
+}
+
+var _hooks = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    useState: useState,
+    onMounted: onMounted,
+    onWillUnmount: onWillUnmount,
+    onWillPatch: onWillPatch,
+    onPatched: onPatched,
+    onWillStart: onWillStart,
+    onWillUpdateProps: onWillUpdateProps,
+    useRef: useRef,
+    useComponent: useComponent,
+    useEnv: useEnv,
+    useSubEnv: useSubEnv,
+    useExternalListener: useExternalListener
+});
+
+class Store extends Context {
+    constructor(config) {
+        super(config.state);
+        this.actions = config.actions;
+        this.env = config.env;
+        this.getters = {};
+        this.updateFunctions = [];
+        if (config.getters) {
+            const firstArg = {
+                state: this.state,
+                getters: this.getters,
+            };
+            for (let g in config.getters) {
+                this.getters[g] = config.getters[g].bind(this, firstArg);
+            }
+        }
+    }
+    dispatch(action, ...payload) {
+        if (!this.actions[action]) {
+            throw new Error(`[Error] action ${action} is undefined`);
+        }
+        const result = this.actions[action]({
+            dispatch: this.dispatch.bind(this),
+            env: this.env,
+            state: this.state,
+            getters: this.getters,
+        }, ...payload);
+        return result;
+    }
+    __notifyComponents() {
+        this.trigger("before-update");
+        return super.__notifyComponents();
+    }
+}
+const isStrictEqual = (a, b) => a === b;
+function useStore(selector, options = {}) {
+    const component = Component.current;
+    const componentId = component.__owl__.id;
+    const store = options.store || component.env.store;
+    if (!(store instanceof Store)) {
+        throw new Error(`No store found when connecting '${component.constructor.name}'`);
+    }
+    let result = selector(store.state, component.props);
+    const hashFn = store.observer.revNumber.bind(store.observer);
+    let revNumber = hashFn(result);
+    const isEqual = options.isEqual || isStrictEqual;
+    if (!store.updateFunctions[componentId]) {
+        store.updateFunctions[componentId] = [];
+    }
+    function selectCompareUpdate(state, props) {
+        const oldResult = result;
+        result = selector(state, props);
+        const newRevNumber = hashFn(result);
+        if ((newRevNumber > 0 && revNumber !== newRevNumber) || !isEqual(oldResult, result)) {
+            revNumber = newRevNumber;
+            return true;
+        }
+        return false;
+    }
+    if (options.onUpdate) {
+        store.on("before-update", component, () => {
+            const newValue = selector(store.state, component.props);
+            options.onUpdate(newValue);
+        });
+    }
+    store.updateFunctions[componentId].push(function () {
+        return selectCompareUpdate(store.state, component.props);
+    });
+    useContextWithCB(store, component, function () {
+        let shouldRender = false;
+        for (let fn of store.updateFunctions[componentId]) {
+            shouldRender = fn() || shouldRender;
+        }
+        if (shouldRender) {
+            return component.render();
+        }
+    });
+    onWillUpdateProps((props) => {
+        selectCompareUpdate(store.state, props);
+    });
+    const __destroy = component.__destroy;
+    component.__destroy = (parent) => {
+        delete store.updateFunctions[componentId];
+        if (options.onUpdate) {
+            store.off("before-update", component);
+        }
+        __destroy.call(component, parent);
+    };
+    if (typeof result !== "object" || result === null) {
+        return result;
+    }
+    return new Proxy(result, {
+        get(target, k) {
+            return result[k];
+        },
+        set(target, k, v) {
+            throw new Error("Store state should only be modified through actions");
+        },
+        has(target, k) {
+            return k in result;
+        },
+    });
+}
+function useDispatch(store) {
+    store = store || Component.current.env.store;
+    return store.dispatch.bind(store);
+}
+function useGetters(store) {
+    store = store || Component.current.env.store;
+    return store.getters;
+}
+
+/**
+ * Owl Tags
+ *
+ * We have here a (very) small collection of tag functions:
+ *
+ * - xml
+ *
+ * The plan is to add a few other tags such as css, globalcss.
+ */
+/**
+ * XML tag helper for defining templates.  With this, one can simply define
+ * an inline template with just the template xml:
+ * ```js
+ *   class A extends Component {
+ *     static template = xml`<div>some template</div>`;
+ *   }
+ * ```
+ */
+function xml(strings, ...args) {
+    const name = `__template__${QWeb.nextId++}`;
+    const value = String.raw(strings, ...args);
+    QWeb.registerTemplate(name, value);
+    return name;
+}
+/**
+ * CSS tag helper for defining inline stylesheets.  With this, one can simply define
+ * an inline stylesheet with just the following code:
+ * ```js
+ *   class A extends Component {
+ *     static style = css`.component-a { color: red; }`;
+ *   }
+ * ```
+ */
+function css(strings, ...args) {
+    const name = `__sheet__${QWeb.nextId++}`;
+    const value = String.raw(strings, ...args);
+    registerSheet(name, value);
+    return name;
+}
+
+var _tags = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    xml: xml,
+    css: css
+});
+
+/**
+ * AsyncRoot
+ *
+ * Owl is by default asynchronous, and the user interface will wait for all its
+ * subcomponents to be rendered before updating the DOM. This is most of the
+ * time what we want, but in some cases, it makes sense to "detach" a component
+ * from this coordination.  This is the goal of the AsyncRoot component.
+ */
+class AsyncRoot extends Component {
+    async __updateProps(nextProps, parentFiber) {
+        this.render(parentFiber.force);
+    }
+}
+AsyncRoot.template = xml `<t t-slot="default"/>`;
+
+class Portal extends Component {
+    constructor(parent, props) {
+        super(parent, props);
+        // boolean to indicate whether or not we must listen to 'dom-appended' event
+        // to hook on the moment when the target is inserted into the DOM (because it
+        // is not when the portal is rendered)
+        this.doTargetLookUp = true;
+        // set of encountered events that need to be redirected
+        this._handledEvents = new Set();
+        // function that will be the event's tunnel (needs to be an arrow function to
+        // avoid having to rebind `this`)
+        this._handlerTunnel = (ev) => {
+            ev.stopPropagation();
+            this.__trigger(ev.originalComponent, ev.type, ev.detail);
+        };
+        // Storing the parent's env
+        this.parentEnv = null;
+        // represents the element that is moved somewhere else
+        this.portal = null;
+        // the target where we will move `portal`
+        this.target = null;
+        this.parentEnv = parent ? parent.env : {};
+        // put a callback in the env that is propagated to children s.t. portal can
+        // register an handler to those events just before children will trigger them
+        useSubEnv({
+            [portalSymbol]: (ev) => {
+                if (!this._handledEvents.has(ev.type)) {
+                    this.portal.elm.addEventListener(ev.type, this._handlerTunnel);
+                    this._handledEvents.add(ev.type);
+                }
+            },
+        });
+    }
+    /**
+     * Override to revert back to a classic Component's structure
+     *
+     * @override
+     */
+    __callWillUnmount() {
+        super.__callWillUnmount();
+        this.el.appendChild(this.portal.elm);
+        this.doTargetLookUp = true;
+    }
+    /**
+     * At each DOM change, we must ensure that the portal contains exactly one
+     * child
+     */
+    __checkVNodeStructure(vnode) {
+        const children = vnode.children;
+        let countRealNodes = 0;
+        for (let child of children) {
+            if (child.sel) {
+                countRealNodes++;
+            }
+        }
+        if (countRealNodes !== 1) {
+            throw new Error(`Portal must have exactly one non-text child (has ${countRealNodes})`);
+        }
+    }
+    /**
+     * Ensure the target is still there at whichever time we render
+     */
+    __checkTargetPresence() {
+        if (!this.target || !document.contains(this.target)) {
+            throw new Error(`Could not find any match for "${this.props.target}"`);
+        }
+    }
+    /**
+     * Move the portal's element to the target
+     */
+    __deployPortal() {
+        this.__checkTargetPresence();
+        this.target.appendChild(this.portal.elm);
+    }
+    /**
+     * Override to remove from the DOM the element we have teleported
+     *
+     * @override
+     */
+    __destroy(parent) {
+        if (this.portal && this.portal.elm) {
+            const displacedElm = this.portal.elm;
+            const parent = displacedElm.parentNode;
+            if (parent) {
+                parent.removeChild(displacedElm);
+            }
+        }
+        super.__destroy(parent);
+    }
+    /**
+     * Override to patch the element that has been teleported
+     *
+     * @override
+     */
+    __patch(target, vnode) {
+        if (this.doTargetLookUp) {
+            const target = document.querySelector(this.props.target);
+            if (!target) {
+                this.env.qweb.on("dom-appended", this, () => {
+                    this.doTargetLookUp = false;
+                    this.env.qweb.off("dom-appended", this);
+                    this.target = document.querySelector(this.props.target);
+                    this.__deployPortal();
+                });
+            }
+            else {
+                this.doTargetLookUp = false;
+                this.target = target;
+            }
+        }
+        this.__checkVNodeStructure(vnode);
+        const shouldDeploy = (!this.portal || this.el.contains(this.portal.elm)) && !this.doTargetLookUp;
+        if (!this.doTargetLookUp && !shouldDeploy) {
+            // Only on pure patching, provided the
+            // this.target's parent has not been unmounted
+            this.__checkTargetPresence();
+        }
+        const portalPatch = this.portal ? this.portal : document.createElement(vnode.children[0].sel);
+        this.portal = patch(portalPatch, vnode.children[0]);
+        vnode.children = [];
+        super.__patch(target, vnode);
+        if (shouldDeploy) {
+            this.__deployPortal();
+        }
+    }
+    /**
+     * Override to set the env
+     */
+    __trigger(component, eventType, payload) {
+        const env = this.env;
+        this.env = this.parentEnv;
+        super.__trigger(component, eventType, payload);
+        this.env = env;
+    }
+}
+Portal.template = xml `<portal><t t-slot="default"/></portal>`;
+Portal.props = {
+    target: {
+        type: String,
+    },
+};
+
+class Link extends Component {
+    constructor() {
+        super(...arguments);
+        this.href = this.env.router.destToPath(this.props);
+    }
+    async willUpdateProps(nextProps) {
+        this.href = this.env.router.destToPath(nextProps);
+    }
+    get isActive() {
+        if (this.env.router.mode === "hash") {
+            return document.location.hash === this.href;
+        }
+        return document.location.pathname === this.href;
+    }
+    navigate(ev) {
+        // don't redirect with control keys
+        if (ev.metaKey || ev.altKey || ev.ctrlKey || ev.shiftKey) {
+            return;
+        }
+        // don't redirect on right click
+        if (ev.button !== undefined && ev.button !== 0) {
+            return;
+        }
+        // don't redirect if `target="_blank"`
+        if (ev.currentTarget && ev.currentTarget.getAttribute) {
+            const target = ev.currentTarget.getAttribute("target");
+            if (/\b_blank\b/i.test(target)) {
+                return;
+            }
+        }
+        ev.preventDefault();
+        this.env.router.navigate(this.props);
+    }
+}
+Link.template = xml `
     <a  t-att-class="{'router-link-active': isActive }"
         t-att-href="href"
         t-on-click="navigate">
         <t t-slot="default"/>
     </a>
-  `;class Ve extends Ee{get routeComponent(){return this.env.router.currentRoute&&this.env.router.currentRoute.component}}Ve.template=Be`
+  `;
+
+class RouteComponent extends Component {
+    get routeComponent() {
+        return this.env.router.currentRoute && this.env.router.currentRoute.component;
+    }
+}
+RouteComponent.template = xml `
     <t>
         <t
             t-if="routeComponent"
@@ -602,4 +7040,253 @@
             t-key="env.router.currentRouteName"
             t-props="env.router.currentParams" />
     </t>
-  `;const He=/\{\{(.*?)\}\}/;function Ge(e){const t=/\{\{(.*?)\}\}/g,n=[];let o;do{(o=t.exec(e))&&n.push(o[1].split(".")[0])}while(o);return n}const Qe=Le,Ye=ke,Ze={EventBus:o,Observer:s},Xe={Router:class{constructor(e,t,n={mode:"history"}){this.currentRoute=null,this.currentParams=null,e.router=this,this.mode=n.mode,this.env=e,this.routes={},this.routeIds=[];let o=1;for(let e of t)e.name||(e.name="__route__"+o++),e.component&&ne.registerComponent("__component__"+e.name,e.component),e.redirect&&this.validateDestination(e.redirect),e.params=e.path?Ge(e.path):[],this.routes[e.name]=e,this.routeIds.push(e.name)}async start(){this._listener=(e=>this._navigate(this.currentPath(),e)),window.addEventListener("popstate",this._listener),"hash"===this.mode&&window.addEventListener("hashchange",this._listener);const e=await this.matchAndApplyRules(this.currentPath());if("match"===e.type){this.currentRoute=e.route,this.currentParams=e.params;const t=this.routeToPath(e.route,e.params);t!==this.currentPath()&&this.setUrlFromPath(t)}}async navigate(e){const t=this.destToPath(e);return this._navigate(t)}async _navigate(e,t){const n=this.currentRouteName,o=this.currentParams,s=await this.matchAndApplyRules(e);if("match"===s.type){const e=this.routeToPath(s.route,s.params);t&&t instanceof PopStateEvent||this.setUrlFromPath(e),this.currentRoute=s.route,this.currentParams=s.params}else"nomatch"===s.type&&(this.currentRoute=null,this.currentParams=null);return!(this.currentRouteName===n&&W(this.currentParams,o)||(this.env.qweb.forceUpdate(),0))}destToPath(e){return this.validateDestination(e),e.path||this.routeToPath(this.routes[e.to],e.params)}get currentRouteName(){return this.currentRoute&&this.currentRoute.name}setUrlFromPath(e){const t="hash"===this.mode?location.pathname:"",n=location.origin+t+e;n!==window.location.href&&window.history.pushState({},e,n)}validateDestination(e){if(!e.path&&!e.to||e.path&&e.to)throw new Error(`Invalid destination: ${JSON.stringify(e)}`)}routeToPath(e,t){const n=e.path.split("/"),o=n.length;for(let e=0;e<o;e++){const o=n[e].match(He);if(o){const s=o[1].split(".")[0];n[e]=t[s]}}return("hash"===this.mode?"#":"")+n.join("/")}currentPath(){return("history"===this.mode?window.location.pathname:window.location.hash.slice(1))||"/"}match(e){for(let t of this.routeIds){let n=this.routes[t],o=this.getRouteParams(n,e);if(o)return{type:"match",route:n,params:o}}return{type:"nomatch"}}async matchAndApplyRules(e){const t=this.match(e);return"match"===t.type?this.applyRules(t):t}async applyRules(e){const t=e.route;if(t.redirect){const e=this.destToPath(t.redirect);return this.matchAndApplyRules(e)}if(t.beforeRouteEnter){const e=await t.beforeRouteEnter({env:this.env,from:this.currentRoute,to:t});if(!1===e)return{type:"cancelled"};if(!0!==e){const t=this.destToPath(e);return this.matchAndApplyRules(t)}}return e}getRouteParams(e,t){if("*"===e.path)return{};t.startsWith("#")&&(t=t.slice(1));const n=e.path.split("/"),o=t.split("/"),s=n.length;if(s!==o.length)return!1;const i={};for(let e=0;e<s;e++){const t=n[e];let s=o[e];const r=t.match(He);if(r){const[e,t]=r[1].split(".");"number"===t&&(s=parseInt(s,10)),i[e]=s}else if(t!==s)return!1}return i}},RouteComponent:Ve,Link:ze},Je=Ue,et=z,tt=qe,nt={AsyncRoot:Ke,Portal:We},ot=Object.assign({},je,{useContext:function(e){const t=Ee.current;return Ne(e,t,t.render.bind(t))},useDispatch:function(e){return(e=e||Ee.current.env.store).dispatch.bind(e)},useGetters:function(e){return(e=e||Ee.current.env.store).getters},useStore:function(e,t={}){const n=Ee.current,o=n.__owl__.id,s=t.store||n.env.store;if(!(s instanceof Ue))throw new Error(`No store found when connecting '${n.constructor.name}'`);let i=e(s.state,n.props);const r=s.observer.revNumber.bind(s.observer);let a=r(i);const l=t.isEqual||Fe;function c(t,n){const o=i;i=e(t,n);const s=r(i);return(s>0&&a!==s||!l(o,i))&&(a=s,!0)}s.updateFunctions[o]||(s.updateFunctions[o]=[]),t.onUpdate&&s.on("before-update",n,()=>{const o=e(s.state,n.props);t.onUpdate(o)}),s.updateFunctions[o].push(function(){return c(s.state,n.props)}),Ne(s,n,function(){let e=!1;for(let t of s.updateFunctions[o])e=t()||e;if(e)return n.render()}),Me(e=>{c(s.state,e)});const d=n.__destroy;return n.__destroy=(e=>{delete s.updateFunctions[o],t.onUpdate&&s.off("before-update",n),d.call(n,e)}),"object"!=typeof i||null===i?i:new Proxy(i,{get:(e,t)=>i[t],set(e,t,n){throw new Error("Store state should only be modified through actions")},has:(e,t)=>t in i})}}),st={};n.Component=Ee,n.Context=Qe,n.QWeb=ne,n.Store=Je,n.__info__=st,n.browser=B,n.config=pe,n.core=Ze,n.hooks=ot,n.misc=nt,n.mount=async function(e,t){const{env:n,props:o,target:s}=t;let i=e.hasOwnProperty("env")?e.env:null;n&&(e.env=n);const r=new e(null,o);i?e.env=i:delete e.env;const a=t.position||"last-child";return await r.mount(s,{position:a}),r},n.router=Xe,n.tags=tt,n.useState=Ye,n.utils=et,st.version="1.2.4",st.date="2021-02-10T13:24:15.236Z",st.hash="985e985",st.url="https://github.com/odoo/owl"},{}]},{},[1]);
+  `;
+
+const paramRegexp = /\{\{(.*?)\}\}/;
+class Router {
+    constructor(env, routes, options = { mode: "history" }) {
+        this.currentRoute = null;
+        this.currentParams = null;
+        env.router = this;
+        this.mode = options.mode;
+        this.env = env;
+        this.routes = {};
+        this.routeIds = [];
+        let nextId = 1;
+        for (let partialRoute of routes) {
+            if (!partialRoute.name) {
+                partialRoute.name = "__route__" + nextId++;
+            }
+            if (partialRoute.component) {
+                QWeb.registerComponent("__component__" + partialRoute.name, partialRoute.component);
+            }
+            if (partialRoute.redirect) {
+                this.validateDestination(partialRoute.redirect);
+            }
+            partialRoute.params = partialRoute.path ? findParams(partialRoute.path) : [];
+            this.routes[partialRoute.name] = partialRoute;
+            this.routeIds.push(partialRoute.name);
+        }
+    }
+    //--------------------------------------------------------------------------
+    // Public API
+    //--------------------------------------------------------------------------
+    async start() {
+        this._listener = (ev) => this._navigate(this.currentPath(), ev);
+        window.addEventListener("popstate", this._listener);
+        if (this.mode === "hash") {
+            window.addEventListener("hashchange", this._listener);
+        }
+        const result = await this.matchAndApplyRules(this.currentPath());
+        if (result.type === "match") {
+            this.currentRoute = result.route;
+            this.currentParams = result.params;
+            const currentPath = this.routeToPath(result.route, result.params);
+            if (currentPath !== this.currentPath()) {
+                this.setUrlFromPath(currentPath);
+            }
+        }
+    }
+    async navigate(to) {
+        const path = this.destToPath(to);
+        return this._navigate(path);
+    }
+    async _navigate(path, ev) {
+        const initialName = this.currentRouteName;
+        const initialParams = this.currentParams;
+        const result = await this.matchAndApplyRules(path);
+        if (result.type === "match") {
+            const finalPath = this.routeToPath(result.route, result.params);
+            const isPopStateEvent = ev && ev instanceof PopStateEvent;
+            if (!isPopStateEvent) {
+                this.setUrlFromPath(finalPath);
+            }
+            this.currentRoute = result.route;
+            this.currentParams = result.params;
+        }
+        else if (result.type === "nomatch") {
+            this.currentRoute = null;
+            this.currentParams = null;
+        }
+        const didChange = this.currentRouteName !== initialName || !shallowEqual(this.currentParams, initialParams);
+        if (didChange) {
+            this.env.qweb.forceUpdate();
+            return true;
+        }
+        return false;
+    }
+    destToPath(dest) {
+        this.validateDestination(dest);
+        return dest.path || this.routeToPath(this.routes[dest.to], dest.params);
+    }
+    get currentRouteName() {
+        return this.currentRoute && this.currentRoute.name;
+    }
+    //--------------------------------------------------------------------------
+    // Private helpers
+    //--------------------------------------------------------------------------
+    setUrlFromPath(path) {
+        const separator = this.mode === "hash" ? location.pathname : "";
+        const url = location.origin + separator + path;
+        if (url !== window.location.href) {
+            window.history.pushState({}, path, url);
+        }
+    }
+    validateDestination(dest) {
+        if ((!dest.path && !dest.to) || (dest.path && dest.to)) {
+            throw new Error(`Invalid destination: ${JSON.stringify(dest)}`);
+        }
+    }
+    routeToPath(route, params) {
+        const path = route.path;
+        const parts = path.split("/");
+        const l = parts.length;
+        for (let i = 0; i < l; i++) {
+            const part = parts[i];
+            const match = part.match(paramRegexp);
+            if (match) {
+                const key = match[1].split(".")[0];
+                parts[i] = params[key];
+            }
+        }
+        const prefix = this.mode === "hash" ? "#" : "";
+        return prefix + parts.join("/");
+    }
+    currentPath() {
+        let result = this.mode === "history" ? window.location.pathname : window.location.hash.slice(1);
+        return result || "/";
+    }
+    match(path) {
+        for (let routeId of this.routeIds) {
+            let route = this.routes[routeId];
+            let params = this.getRouteParams(route, path);
+            if (params) {
+                return {
+                    type: "match",
+                    route: route,
+                    params: params,
+                };
+            }
+        }
+        return { type: "nomatch" };
+    }
+    async matchAndApplyRules(path) {
+        const result = this.match(path);
+        if (result.type === "match") {
+            return this.applyRules(result);
+        }
+        return result;
+    }
+    async applyRules(matchResult) {
+        const route = matchResult.route;
+        if (route.redirect) {
+            const path = this.destToPath(route.redirect);
+            return this.matchAndApplyRules(path);
+        }
+        if (route.beforeRouteEnter) {
+            const result = await route.beforeRouteEnter({
+                env: this.env,
+                from: this.currentRoute,
+                to: route,
+            });
+            if (result === false) {
+                return { type: "cancelled" };
+            }
+            else if (result !== true) {
+                // we want to navigate to another destination
+                const path = this.destToPath(result);
+                return this.matchAndApplyRules(path);
+            }
+        }
+        return matchResult;
+    }
+    getRouteParams(route, path) {
+        if (route.path === "*") {
+            return {};
+        }
+        if (path.startsWith("#")) {
+            path = path.slice(1);
+        }
+        const descrParts = route.path.split("/");
+        const targetParts = path.split("/");
+        const l = descrParts.length;
+        if (l !== targetParts.length) {
+            return false;
+        }
+        const result = {};
+        for (let i = 0; i < l; i++) {
+            const descr = descrParts[i];
+            let target = targetParts[i];
+            const match = descr.match(paramRegexp);
+            if (match) {
+                const [key, suffix] = match[1].split(".");
+                if (suffix === "number") {
+                    target = parseInt(target, 10);
+                }
+                result[key] = target;
+            }
+            else if (descr !== target) {
+                return false;
+            }
+        }
+        return result;
+    }
+}
+function findParams(str) {
+    const globalParamRegexp = /\{\{(.*?)\}\}/g;
+    const result = [];
+    let m;
+    do {
+        m = globalParamRegexp.exec(str);
+        if (m) {
+            result.push(m[1].split(".")[0]);
+        }
+    } while (m);
+    return result;
+}
+
+/**
+ * This file is the main file packaged by rollup (see rollup.config.js).  From
+ * this file, we export all public owl elements.
+ *
+ * Note that dynamic values, such as a date or a commit hash are added by rollup
+ */
+const Context$1 = Context;
+const useState$1 = useState;
+const core = { EventBus, Observer };
+const router = { Router, RouteComponent, Link };
+const Store$1 = Store;
+const utils = _utils;
+const tags = _tags;
+const misc = { AsyncRoot, Portal };
+const hooks$1 = Object.assign({}, _hooks, {
+    useContext: useContext,
+    useDispatch: useDispatch,
+    useGetters: useGetters,
+    useStore: useStore,
+});
+const __info__ = {};
+
+exports.Component = Component;
+exports.Context = Context$1;
+exports.QWeb = QWeb;
+exports.Store = Store$1;
+exports.__info__ = __info__;
+exports.browser = browser;
+exports.config = config;
+exports.core = core;
+exports.hooks = hooks$1;
+exports.misc = misc;
+exports.mount = mount;
+exports.router = router;
+exports.tags = tags;
+exports.useState = useState$1;
+exports.utils = utils;
+
+
+__info__.version = '1.2.4';
+__info__.date = '2021-02-10T13:24:15.236Z';
+__info__.hash = '985e985';
+__info__.url = 'https://github.com/odoo/owl';
+
+},{}]},{},[1]);

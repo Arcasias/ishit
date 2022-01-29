@@ -1,18 +1,12 @@
 import { Component, hooks, tags } from "@odoo/owl";
 import { OwlEvent } from "@odoo/owl/dist/types/core/owl_event";
 import { drawDot, floodFillPixels, range } from "../../common/utils";
-import { name } from "../../package.min.json";
 import { Environment } from "../services/Environment";
 import { DropdownItem } from "./Dropdown";
-import { Main } from "./Main";
-import { Navbar } from "./Navbar";
-import { NotificationManager } from "./NotificationManager";
-import { Settings } from "./Settings";
-import { WindowControls } from "./WindowControls";
+import { ImageComponent } from "./ImageComponent";
 
 type Extension = "all" | "gif" | "png";
 type EditorTool = "backgroundEraser" | "crop" | "brush";
-type anyFn = (...args: any) => any;
 
 interface ImageMetadata {
   size: [number, number];
@@ -30,11 +24,6 @@ interface ImageState {
   params?: any;
 }
 
-interface HistoryItem {
-  action: anyFn;
-  cancel: anyFn;
-}
-
 const { xml: html, css } = tags;
 const {
   onMounted,
@@ -49,7 +38,6 @@ const EXTENSIONS: Extension[] = ["all", "gif", "png"];
 const EDITABLE_EXTENSIONS = ["png", "jpg", "jpeg"];
 const IMAGE_COLS = 5;
 const IMAGE_ROWS = 5;
-const IMAGE_URL_RE = /"https:\/\/[\w\/\.-]+\.(png|jpg|jpeg|gif)"/gi;
 const IMAGE_MTYPE_RE = /(image|text)\/(\w+);?/i;
 const QUERY_EXTENSION_RE = /\b(gif|png)\b/gi;
 const URL_PREFIX = "https://";
@@ -76,50 +64,6 @@ const getDefaultState = () => ({
   updateId: <number>0,
   urls: <string[]>[],
 });
-
-const useAnimation = <T>(refString: string, animationName: string) => {
-  const ref = useRef(refString);
-  const state = useState({ value: <T | null>null });
-  const enterCls = `${animationName}-enter`;
-  const leaveCls = `${animationName}-leave`;
-  let willBeInDom = false;
-
-  hooks.onPatched(() => {
-    if (willBeInDom && ref.el) {
-      willBeInDom = false;
-      let isEntering = true;
-      ref.el.addEventListener("animationend", () => {
-        if (!ref.el) {
-          return;
-        }
-        if (isEntering) {
-          ref.el.classList.remove(enterCls);
-          isEntering = false;
-        } else {
-          ref.el.classList.remove(leaveCls);
-          state.value = null;
-        }
-      });
-      ref.el.classList.add(enterCls);
-    }
-  });
-
-  return {
-    get value() {
-      return state.value;
-    },
-    set value(val: T | null) {
-      if (val === null) {
-        ref.el?.classList.add(leaveCls);
-      } else {
-        state.value = val;
-        if (!ref.el) {
-          willBeInDom = true;
-        }
-      }
-    },
-  };
-};
 
 const useCustomStyle = (
   refString: string,
@@ -151,97 +95,212 @@ const useCustomStyle = (
   });
 };
 
-export class Root extends Component<{}, Environment> {
+export class Main extends Component<{}, Environment> {
   //---------------------------------------------------------------------------
   // PROPS / COMPONENTS
   //---------------------------------------------------------------------------
-  static components = {
-    Main,
-    Navbar,
-    NotificationManager,
-    Settings,
-    WindowControls,
-  };
+  static components = { ImageComponent };
   static props = {};
 
   //---------------------------------------------------------------------------
   // TEMPLATE
   //---------------------------------------------------------------------------
   static template = html`
-    <div class="app">
-      <t t-set="favorites" t-value="getFavorites()" />
-      <t t-set="suggestions" t-value="getSuggestions()" />
-      <t t-if="modalManager.value">
-        <div class="modal-backdrop"></div>
-        <div class="modal" tabindex="-1" role="dialog">
-          <div class="modal-dialog slide-top" role="document" t-ref="settings">
-            <div class="modal-content">
-              <header class="modal-header">
-                <h5 class="modal-title">Settings</h5>
-                <button
-                  type="button"
-                  class="btn btn-sm"
-                  t-on-click="closeSettings"
+    <div class="Main">
+      <main class="main container-fluid">
+        <t t-if="state.urls.length">
+          <section class="col me-2">
+            <nav class="pager nav mb-2">
+              <ul class="pagination m-0 me-auto">
+                <li class="page-item" t-on-click.prevent="pagePrev()">
+                  <button
+                    class="page-link"
+                    t-att-disabled="state.pageIndex lte 0"
+                  >
+                    <i class="fas fa-chevron-left"></i>
+                  </button>
+                </li>
+                <li
+                  t-foreach="range(pageCount)"
+                  t-as="page"
+                  t-key="page"
+                  class="page-item"
+                  t-att-class="{ active: state.pageIndex === page }"
+                  t-on-click.prevent="pageSet(page)"
                 >
-                  <i class="fas fa-times"></i>
-                </button>
-              </header>
-              <main class="modal-body">
+                  <button class="page-link" t-esc="page + 1"></button>
+                </li>
+                <li class="page-item" t-on-click.prevent="pageNext">
+                  <button
+                    class="page-link"
+                    t-att-disabled="state.pageIndex gte pageCount - 1"
+                  >
+                    <i class="fas fa-chevron-right"></i>
+                  </button>
+                </li>
+              </ul>
+              <span
+                class="input-group-text ms-auto"
+                t-esc="getPagerValue()"
+              ></span>
+            </nav>
+            <ul class="image-gallery" t-ref="image-gallery">
+              <li
+                t-foreach="getCurrentPageUrls()"
+                t-as="url"
+                t-key="url_index"
+                class="image-wrapper"
+                tabindex="1"
+                t-att-class="{ empty: !url, selected: focusedImage and focusedImage.src === url }"
+                t-on-mouseenter="setHoveredImage(true)"
+                t-on-mouseleave="setHoveredImage(false)"
+                t-on-focus="setFocusedImage(true)"
+                t-on-click="copyActiveImage"
+                t-on-keydown="onImageKeydown(url_index)"
+              >
+                <ImageComponent src="url" onReady="onImageReady" />
+              </li>
+            </ul>
+          </section>
+          <section class="col">
+            <div
+              class="preview me-0"
+              t-if="activeImage"
+              t-on-mouseenter="state.showImageOptions = true"
+              t-on-mouseleave="state.showImageOptions = false"
+            >
+              <div class="image-preview" t-ref="image-preview">
+                <canvas
+                  t-if="isActiveImageEditable()"
+                  t-ref="preview-canvas"
+                  t-on-click="editPreview"
+                ></canvas>
+                <ImageComponent
+                  t-else=""
+                  src="activeImage.src"
+                  alt="'Image preview'"
+                  preload="false"
+                />
+              </div>
+              <div class="preview-top">
                 <div
-                  t-foreach="filteredConfigItems"
-                  t-as="item"
-                  t-key="item.key"
-                  t-att-class="{ 'mb-3': !item_last, 'form-check': item.type === 'checkbox' }"
-                  t-on-change="configSet(item.key, true)"
+                  t-if="state.showImageOptions"
+                  class="image-actions btn-group"
                 >
-                  <label
-                    t-attf-class="form{{ item.type === 'checkbox' ? '-check' : '' }}-label"
-                    t-esc="item.text"
-                  ></label>
-                  <input
-                    t-if="item.type === 'checkbox'"
-                    t-att-id="item.key"
-                    type="checkbox"
-                    class="form-check-input"
-                    t-att-checked="configGet(item.key)"
-                  />
-                  <input
-                    t-elif="item.type === 'range'"
-                    type="range"
-                    class="form-range h-100"
-                    t-att-min="item.min"
-                    t-att-max="item.max"
-                    step="1"
-                    t-att-value="configGet(item.key)"
-                  />
-                  <input
-                    t-else=""
-                    t-att-type="item.type"
-                    class="form-control"
-                    t-att-value="configGet(item.key)"
-                  />
+                  <a
+                    class="btn btn-outline-primary bg-white"
+                    title="Download"
+                    download="download"
+                    t-att-href="activeImage.src"
+                    ><i class="fas fa-download"></i
+                  ></a>
+                  <button
+                    class="btn btn-outline-primary bg-white"
+                    title="Copy image"
+                    t-on-click="copyActiveImage"
+                  >
+                    <i class="fas fa-copy"></i>
+                  </button>
+                  <button
+                    class="btn btn-outline-primary bg-white"
+                    title="Copy URL"
+                    t-on-click="copyActiveImageUrl"
+                  >
+                    <i class="fas fa-code"></i>
+                  </button>
                 </div>
-              </main>
-              <footer class="modal-footer">
-                <span class="form-text text-muted fst-italic me-auto">
-                  Changes are saved automatically
-                </span>
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  t-on-click="closeSettings"
+                <div class="image-badges ms-auto">
+                  <span
+                    class="badge border border-primary text-secondary bg-white me-2"
+                    t-esc="getActiveImageSize()"
+                  ></span>
+                  <span
+                    class="badge border border-primary text-secondary bg-white"
+                    t-esc="getActiveImageExtension().toUpperCase()"
+                  ></span>
+                </div>
+              </div>
+              <div t-if="state.showImageOptions" class="preview-bottom mb-3">
+                <div
+                  t-if="state.editorTool === 'backgroundEraser'"
+                  class="input-group"
                 >
-                  Ok
-                </button>
-              </footer>
+                  <div class="form-control">
+                    <input
+                      type="range"
+                      class="form-range h-100"
+                      title="Tolerance"
+                      min="configGet('tolerance').min"
+                      max="configGet('tolerance').max"
+                      step="1"
+                      t-att-value="getImageParam('tolerance')"
+                      t-on-change="setImageParam('tolerance')"
+                    />
+                  </div>
+                </div>
+                <div t-elif="state.editorTool === 'brush'" class="input-group">
+                  <div class="form-control">
+                    <input
+                      type="range"
+                      class="form-range h-100"
+                      title="Radius"
+                      min="configGet('radius').min"
+                      max="configGet('radius').max"
+                      step="1"
+                      t-att-value="getImageParam('radius')"
+                      t-on-change="setImageParam('radius')"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="preview-left">
+                <div
+                  t-if="state.showImageOptions and isActiveImageEditable()"
+                  class="image-tools btn-group-vertical"
+                >
+                  <button
+                    t-attf-class="btn {{ state.editorTool === 'brush' ? 'btn-primary' : 'btn-outline-primary bg-white' }}"
+                    title="Paint"
+                    t-on-click="state.editorTool = 'brush'"
+                  >
+                    <i class="fas fa-paint-brush"></i>
+                  </button>
+                  <button
+                    t-attf-class="btn {{ state.editorTool === 'backgroundEraser' ? 'btn-primary' : 'btn-outline-primary bg-white' }}"
+                    title="Background eraser"
+                    t-on-click="state.editorTool = 'backgroundEraser'"
+                  >
+                    <i class="fas fa-magic"></i>
+                  </button>
+                  <button
+                    t-attf-class="btn {{ state.editorTool === 'crop' ? 'btn-primary' : 'btn-outline-primary bg-white' }}"
+                    title="Crop image"
+                    t-on-click="state.editorTool = 'crop'"
+                  >
+                    <i class="fas fa-crop"></i>
+                  </button>
+                  <button
+                    class="btn btn-outline-primary bg-white"
+                    title="Reset image"
+                    t-on-click="resetPreview"
+                  >
+                    <i class="fas fa-redo"></i>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+            <div t-else="" class="default-message">
+              <span class="message text-muted">Source unavailable</span>
+            </div>
+          </section>
+        </t>
+        <div t-elif="state.searching" class="default-message">
+          <span class="message text-muted">Searching ...</span>
         </div>
-      </t>
-      <WindowControls t-if="env.isDesktop" />
-      <NotificationManager />
-      <Navbar />
-      <main />
+        <div t-else="" class="default-message">
+          <span class="message text-muted me-3">No images to display</span>
+        </div>
+      </main>
     </div>
   `;
 
@@ -257,16 +316,17 @@ export class Root extends Component<{}, Environment> {
   state = useState(getDefaultState());
 
   currentSearch: string = "";
+  favoritesManager = new StorageManager<string[]>("fav", {
+    parse: (urls) => urls.split(",").map((u) => URL_PREFIX + u),
+    serialize: (urls) => urls.map((u) => u.slice(URL_PREFIX.length)).join(","),
+  });
   focusedImage: HTMLImageElement | null = null;
   hasClipboardAccess = false;
   hoveredImage: HTMLImageElement | null = null;
   imageStates: { [url: string]: ImageState } = {};
   imageMimeTypes: { [url: string]: string | null } = {};
-  modalManager = useAnimation<boolean>("settings", "slide-top");
   notifyTimeout: number = 0;
-  notificationManager = useAnimation<string>("notification", "slide-right");
   toFocus: number | null = null;
-  searchInputRef = useRef("search-input");
   previewCanvasRef = useRef("preview-canvas");
   willUpdateCanvas: boolean = false;
 
@@ -290,31 +350,40 @@ export class Root extends Component<{}, Environment> {
   //---------------------------------------------------------------------------
 
   setup() {
-    useExternalListener(window, "keydown", this.onWindowKeydown);
+    useCustomStyle("image-gallery", (el) => {
+      const { x, y } = el.getBoundingClientRect();
+      return `height: ${window.innerHeight - y - x}px;`;
+    });
+    useCustomStyle("image-preview", (el) => {
+      const { x, y, width } = el.getBoundingClientRect();
+      const padding = window.innerWidth - x - width;
+      return `height: ${window.innerHeight - y - padding}px;`;
+    });
 
-    onMounted(() => this.onMounted());
+    onPatched(() => this.onPatched());
   }
 
-  onMounted() {
-    document.title = name;
+  onPatched() {
+    const img = this.activeImage;
+    if (this.willUpdateCanvas && img && this.previewCanvasRef.el) {
+      this.willUpdateCanvas = false;
+      if (img.complete) {
+        this.drawPreview();
+      } else {
+        img.addEventListener("load", () => this.drawPreview(), { once: true });
+      }
+    }
+    if (this.toFocus !== null) {
+      this.focusImage(this.toFocus);
+    }
   }
 
   //---------------------------------------------------------------------------
   // PRIVATE
   //---------------------------------------------------------------------------
 
-  applyFavorite({ detail }: OwlEvent<DropdownItem>): void {
-    this.state.query = detail.value;
-    this.state.ext = detail.badge
-      ? (detail.badge.toLowerCase() as Extension)
-      : "all";
-    this.search();
-  }
-
   applyMutations(): void {
-    if (!this.previewCanvasRef.el || !this.activeImage) {
-      return;
-    }
+    if (!this.previewCanvasRef.el || !this.activeImage) return;
     if (this.imageStates[this.activeImage.src]?.mutations.length) {
       const imageState = this.imageStates[this.activeImage.src];
       const canvas = this.previewCanvasRef.el as HTMLCanvasElement;
@@ -345,39 +414,17 @@ export class Root extends Component<{}, Environment> {
     this.forceUpdate(true);
   }
 
-  applySearchExtension({ detail }: OwlEvent<DropdownItem>): void {
-    this.state.ext = detail.id as Extension;
-  }
-
-  clearFavorites(): void {
-    this.favoritesManager.clear();
-    this.state.query = "";
-    this.forceUpdate();
-  }
-
-  closeSettings() {
-    if (!this.modalManager.value) {
-      return;
-    }
-    this.modalManager.value = null;
-    this.forceUpdate(true);
-  }
-
   configGet(key: string) {
     return configManager.get(key);
   }
 
   async copyActiveImage(): Promise<void> {
     const img = this.activeImage;
-    if (!img || !this.hasClipboardAccess) {
-      return;
-    }
+    if (!img || !this.hasClipboardAccess) return;
     if (!this.isActiveImageEditable()) {
       return this.copyActiveImageUrl();
     }
-    if (!this.previewCanvasRef.el) {
-      return;
-    }
+    if (!this.previewCanvasRef.el) return;
     const canvas = this.previewCanvasRef.el as HTMLCanvasElement;
     const blob: Blob = await new Promise((resolve) =>
       canvas.toBlob((b) => resolve(b!), "image/png")
@@ -389,11 +436,48 @@ export class Root extends Component<{}, Environment> {
 
   async copyActiveImageUrl(): Promise<void> {
     const img = this.activeImage;
-    if (!img || !this.hasClipboardAccess) {
-      return;
-    }
+    if (!img || !this.hasClipboardAccess) return;
     await navigator.clipboard.writeText(img.src);
     this.notify("URL copied!");
+  }
+
+  drawPreview(): void {
+    const img = this.activeImage;
+    const canvas = this.previewCanvasRef.el as HTMLCanvasElement;
+    if (!img || !canvas) return;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d")!;
+    const imageState = this.imageStates[img.src];
+    if (imageState?.imageData) {
+      ctx.putImageData(imageState.imageData, 0, 0);
+    } else {
+      ctx.drawImage(img, 0, 0);
+    }
+  }
+
+  editPreview(ev: MouseEvent) {
+    if (this.state.editorTool === null) return;
+    const canvas = ev.target as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    const img = this.activeImage!;
+
+    const ratioX = img.naturalWidth / rect.width;
+    const ratioY = img.naturalHeight / rect.height;
+
+    const x = Math.floor((ev.clientX - rect.x) * ratioX);
+    const y = Math.floor((ev.clientY - rect.y) * ratioY);
+
+    const state = this.imageStates[img.src];
+    const mutation: ImageMutation = {
+      tool: this.state.editorTool,
+      args: [x, y],
+    };
+    historyManager.add(
+      () => state.mutations.push(mutation),
+      () => state.mutations.pop()
+    );
+    this.applyMutations();
   }
 
   focusImage(index: number, lazy: boolean = false): void {
@@ -405,18 +489,12 @@ export class Root extends Component<{}, Environment> {
       ".image-gallery .image-wrapper"
     );
     const target = images[index];
-    if (!target) {
-      return;
-    }
+    if (!target) return;
     this.setFocusedImage(true, target);
     if (this.focusedImage) {
       target.focus();
       this.toFocus = null;
     }
-  }
-
-  focusSearchBar(): void {
-    return this.searchInputRef.el?.focus();
   }
 
   forceUpdate(updatePreview = false): void {
@@ -454,20 +532,6 @@ export class Root extends Component<{}, Environment> {
     return this.state.urls.slice(start, start + count);
   }
 
-  getFavorites(): DropdownItem[] {
-    return this.env.favorites.keys().map((favorite) => {
-      let badge: string | null = null;
-      const id = favorite;
-      const value = favorite
-        .replace(QUERY_EXTENSION_RE, (ext: string) => {
-          badge = ext.toUpperCase();
-          return "";
-        })
-        .trim();
-      return { id, value, badge };
-    });
-  }
-
   getFullQuery(clean: boolean = true): string {
     let query = clean ? cleanQuery(this.state.query) : this.state.query;
     if (query && this.state.ext !== "all") {
@@ -499,17 +563,6 @@ export class Root extends Component<{}, Environment> {
     const startIndex = this.state.pageIndex * count;
     const endIndex = Math.min(startIndex + count, total);
     return `${startIndex + 1}-${endIndex} / ${total}`;
-  }
-
-  getSuggestions(): string[] {
-    const query = cleanQuery(this.state.query);
-    if (query) {
-      return [
-        ...new Set(searchCache.getKeys().map(cleanQuery).filter(Boolean)),
-      ].filter((q) => q !== query && q.startsWith(query));
-    } else {
-      return [];
-    }
   }
 
   isActiveImageEditable(): boolean {
@@ -575,95 +628,6 @@ export class Root extends Component<{}, Environment> {
       size: [img.naturalWidth, img.naturalHeight],
       mimetype: contentType,
     };
-  }
-
-  onSearchKeydown(ev: KeyboardEvent): void {
-    const { activeSuggestion } = this.state;
-    const notNull = activeSuggestion !== null;
-    switch (ev.key) {
-      case "ArrowUp": {
-        ev.preventDefault();
-        if (notNull && activeSuggestion! > 0) {
-          this.state.activeSuggestion!--;
-        } else {
-          this.state.activeSuggestion = this.getSuggestions().length - 1;
-        }
-        return;
-      }
-      case "ArrowDown": {
-        ev.preventDefault();
-        const suggestions = this.getSuggestions();
-        if (notNull && activeSuggestion! < suggestions.length - 1) {
-          this.state.activeSuggestion!++;
-        } else {
-          this.state.activeSuggestion = 0;
-        }
-        return;
-      }
-      case "Enter": {
-        if (notNull) {
-          const suggestion = this.getSuggestions()[activeSuggestion!];
-          if (suggestion) {
-            this.state.query = suggestion;
-          }
-        }
-        this.search();
-        return;
-      }
-      case "Escape": {
-        this.state.query = "";
-        return;
-      }
-    }
-  }
-
-  onWindowKeydown({ key, ctrlKey }: KeyboardEvent): void {
-    switch (key) {
-      case "F12": {
-        this.env.api.send("toggle-dev-tools");
-        return;
-      }
-      case "F5": {
-        location.reload();
-        return;
-      }
-      case "Escape": {
-        this.state.showSuggestions = false;
-        this.closeSettings();
-        this.focusSearchBar();
-        return;
-      }
-      case "Enter": {
-        const focused = document.activeElement;
-        if (
-          focused === document.body || // No focus
-          focused?.classList.contains("image-wrapper") // Focus on image
-        ) {
-          this.copyActiveImage();
-        }
-        return;
-      }
-      case "f": {
-        if (ctrlKey) this.focusSearchBar();
-        return;
-      }
-      case "I": {
-        if (ctrlKey) this.env.api.send("toggle-dev-tools");
-        return;
-      }
-      case "r": {
-        if (ctrlKey) location.reload();
-        return;
-      }
-      case "y": {
-        if (ctrlKey) this.redo();
-        return;
-      }
-      case "z": {
-        if (ctrlKey) this.undo();
-        return;
-      }
-    }
   }
 
   openSettings() {

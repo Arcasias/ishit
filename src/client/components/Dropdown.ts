@@ -17,7 +17,24 @@ interface DropdownProps {
   deletable?: boolean;
 }
 
-export default class Dropdown extends Component<DropdownProps, Environment> {
+export class Dropdown extends Component<DropdownProps, Environment> {
+  //---------------------------------------------------------------------------
+  // PROPS / COMPONENTS
+  //---------------------------------------------------------------------------
+  static props = {
+    title: String,
+    items: {
+      type: Array,
+      element: {
+        id: String,
+        value: String,
+        badge: { type: String, optional: true },
+      },
+    },
+    small: { type: Boolean, optional: true },
+    deletable: { type: Boolean, optional: true },
+  };
+
   //---------------------------------------------------------------------------
   // TEMPLATE
   //---------------------------------------------------------------------------
@@ -109,8 +126,8 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
     }
   `;
 
-  private buttonRef = useRef("main-button");
-  private state = useState({
+  buttonRef = useRef("main-button");
+  state = useState({
     show: <boolean>false,
     promptClear: <boolean>false,
   });
@@ -119,8 +136,7 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
   // LIFECYCLE
   //---------------------------------------------------------------------------
 
-  constructor() {
-    super(...arguments);
+  setup() {
     useExternalListener(window, "click", this.onWindowClick);
     useExternalListener(window, "keydown", this.onWindowKeydown);
   }
@@ -129,12 +145,12 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
   // Private
   //---------------------------------------------------------------------------
 
-  private close(): void {
+  close(): void {
     this.state.show = false;
     this.state.promptClear = false;
   }
 
-  private focusNext(el: HTMLElement): void {
+  focusNext(el: HTMLElement): void {
     let next = el.nextSibling as HTMLElement;
     while (next?.classList.contains("dropdown-divider")) {
       next = next.nextSibling as HTMLElement;
@@ -144,7 +160,7 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
     }
   }
 
-  private focusPrevious(el: HTMLElement): void {
+  focusPrevious(el: HTMLElement): void {
     let previous = el.previousSibling as HTMLElement;
     while (previous?.classList.contains("dropdown-divider")) {
       previous = previous.previousSibling as HTMLElement;
@@ -156,7 +172,7 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
     }
   }
 
-  private onButtonKeydown({ key }: KeyboardEvent): void {
+  onButtonKeydown({ key }: KeyboardEvent): void {
     switch (key) {
       case "ArrowDown": {
         this.el!.querySelector<HTMLElement>(".dropdown-item")?.focus();
@@ -165,7 +181,7 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
     }
   }
 
-  private onItemKeydown(item: DropdownItem | null, ev: KeyboardEvent): void {
+  onItemKeydown(item: DropdownItem | null, ev: KeyboardEvent): void {
     const target = ev.target as HTMLElement;
     switch (ev.key) {
       case "ArrowUp": {
@@ -184,28 +200,28 @@ export default class Dropdown extends Component<DropdownProps, Environment> {
     }
   }
 
-  private onSelect(item: DropdownItem): void {
+  onSelect(item: DropdownItem): void {
     this.trigger("select", item);
     this.close();
   }
 
-  private onWindowClick(ev: MouseEvent): void {
+  onWindowClick(ev: MouseEvent): void {
     if (!this.el?.contains(ev.target as HTMLElement)) {
       this.close();
     }
   }
 
-  private onWindowKeydown({ key }: KeyboardEvent): void {
+  onWindowKeydown({ key }: KeyboardEvent): void {
     if (key === "Escape") {
       this.close();
     }
   }
 
-  private open(): void {
+  open(): void {
     this.state.show = true;
   }
 
-  private toggle(): void {
+  toggle(): void {
     this.state.show ? this.close() : this.open();
   }
 }

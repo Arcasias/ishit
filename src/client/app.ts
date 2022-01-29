@@ -1,8 +1,12 @@
-import { Component } from "@odoo/owl";
-import { env } from "./classes/Environment";
-import App from "./components/App";
+import { Component, config } from "@odoo/owl";
+import { env } from "./services/Environment";
+import { Root } from "./components/App";
 
 Component.env = env;
 
-const app = new App();
+if (env.api.isDev) {
+  config.mode = "dev";
+}
+
+const app = new Root();
 app.mount(document.body);

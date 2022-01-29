@@ -5,8 +5,9 @@ import { name } from "../../package.min.json";
 import { Environment } from "../services/Environment";
 import { DropdownItem } from "./Dropdown";
 import { Main } from "./Main";
+import { ModalManager } from "./Modal";
 import { Navbar } from "./Navbar";
-import { NotificationManager } from "./NotificationManager";
+import { NotificationManager } from "./Notification";
 import { Settings } from "./Settings";
 import { WindowControls } from "./WindowControls";
 
@@ -49,10 +50,8 @@ const EXTENSIONS: Extension[] = ["all", "gif", "png"];
 const EDITABLE_EXTENSIONS = ["png", "jpg", "jpeg"];
 const IMAGE_COLS = 5;
 const IMAGE_ROWS = 5;
-const IMAGE_URL_RE = /"https:\/\/[\w\/\.-]+\.(png|jpg|jpeg|gif)"/gi;
 const IMAGE_MTYPE_RE = /(image|text)\/(\w+);?/i;
 const QUERY_EXTENSION_RE = /\b(gif|png)\b/gi;
-const URL_PREFIX = "https://";
 const NOTIFICATION_DELAY = 2500;
 
 const cleanQuery = (query: string): string =>
@@ -77,86 +76,13 @@ const getDefaultState = () => ({
   urls: <string[]>[],
 });
 
-const useAnimation = <T>(refString: string, animationName: string) => {
-  const ref = useRef(refString);
-  const state = useState({ value: <T | null>null });
-  const enterCls = `${animationName}-enter`;
-  const leaveCls = `${animationName}-leave`;
-  let willBeInDom = false;
-
-  hooks.onPatched(() => {
-    if (willBeInDom && ref.el) {
-      willBeInDom = false;
-      let isEntering = true;
-      ref.el.addEventListener("animationend", () => {
-        if (!ref.el) {
-          return;
-        }
-        if (isEntering) {
-          ref.el.classList.remove(enterCls);
-          isEntering = false;
-        } else {
-          ref.el.classList.remove(leaveCls);
-          state.value = null;
-        }
-      });
-      ref.el.classList.add(enterCls);
-    }
-  });
-
-  return {
-    get value() {
-      return state.value;
-    },
-    set value(val: T | null) {
-      if (val === null) {
-        ref.el?.classList.add(leaveCls);
-      } else {
-        state.value = val;
-        if (!ref.el) {
-          willBeInDom = true;
-        }
-      }
-    },
-  };
-};
-
-const useCustomStyle = (
-  refString: string,
-  calcStyle: (el: HTMLElement) => string
-): void => {
-  const ref = useRef(refString);
-  let isStyleApplied: boolean = false;
-  let style: string | null = null;
-
-  const applyStyle = () => {
-    if (isStyleApplied && !ref.el) {
-      isStyleApplied = false;
-    } else if (!isStyleApplied && ref.el) {
-      isStyleApplied = true;
-      if (!style) style = calcStyle(ref.el);
-      ref.el.setAttribute("style", style);
-    }
-  };
-
-  hooks.onMounted(applyStyle);
-  hooks.onPatched(applyStyle);
-
-  let resizeTimeout: number = 0;
-  useExternalListener(window, "resize", () => {
-    style = null;
-    isStyleApplied = false;
-    window.clearTimeout(resizeTimeout);
-    resizeTimeout = window.setTimeout(applyStyle, 250);
-  });
-};
-
 export class Root extends Component<{}, Environment> {
   //---------------------------------------------------------------------------
   // PROPS / COMPONENTS
   //---------------------------------------------------------------------------
   static components = {
     Main,
+    ModalManager,
     Navbar,
     NotificationManager,
     Settings,
@@ -168,87 +94,14 @@ export class Root extends Component<{}, Environment> {
   // TEMPLATE
   //---------------------------------------------------------------------------
   static template = html`
-    <div class="app">
-      <t t-set="favorites" t-value="getFavorites()" />
-      <t t-set="suggestions" t-value="getSuggestions()" />
-      <t t-if="modalManager.value">
-        <div class="modal-backdrop"></div>
-        <div class="modal" tabindex="-1" role="dialog">
-          <div class="modal-dialog slide-top" role="document" t-ref="settings">
-            <div class="modal-content">
-              <header class="modal-header">
-                <h5 class="modal-title">Settings</h5>
-                <button
-                  type="button"
-                  class="btn btn-sm"
-                  t-on-click="closeSettings"
-                >
-                  <i class="fas fa-times"></i>
-                </button>
-              </header>
-              <main class="modal-body">
-                <div
-                  t-foreach="filteredConfigItems"
-                  t-as="item"
-                  t-key="item.key"
-                  t-att-class="{ 'mb-3': !item_last, 'form-check': item.type === 'checkbox' }"
-                  t-on-change="configSet(item.key, true)"
-                >
-                  <label
-                    t-attf-class="form{{ item.type === 'checkbox' ? '-check' : '' }}-label"
-                    t-esc="item.text"
-                  ></label>
-                  <input
-                    t-if="item.type === 'checkbox'"
-                    t-att-id="item.key"
-                    type="checkbox"
-                    class="form-check-input"
-                    t-att-checked="configGet(item.key)"
-                  />
-                  <input
-                    t-elif="item.type === 'range'"
-                    type="range"
-                    class="form-range h-100"
-                    t-att-min="item.min"
-                    t-att-max="item.max"
-                    step="1"
-                    t-att-value="configGet(item.key)"
-                  />
-                  <input
-                    t-else=""
-                    t-att-type="item.type"
-                    class="form-control"
-                    t-att-value="configGet(item.key)"
-                  />
-                </div>
-              </main>
-              <footer class="modal-footer">
-                <span class="form-text text-muted fst-italic me-auto">
-                  Changes are saved automatically
-                </span>
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  t-on-click="closeSettings"
-                >
-                  Ok
-                </button>
-              </footer>
-            </div>
-          </div>
-        </div>
-      </t>
+    <div class="Root">
       <WindowControls t-if="env.isDesktop" />
       <NotificationManager />
+      <ModalManager />
       <Navbar />
-      <main />
+      <Main />
     </div>
   `;
-
-  //---------------------------------------------------------------------------
-  // STYLE
-  //---------------------------------------------------------------------------
-  static style = css``;
 
   //---------------------------------------------------------------------------
   // PROPERTIES

@@ -15,4 +15,5 @@ contextBridge.exposeInMainWorld("electron", {
       }
     );
   },
+  isDev: process.argv.includes("--dev"),
 } as APIBridge);

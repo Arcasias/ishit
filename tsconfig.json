@@ -5,6 +5,7 @@
     "sourceMap": false,
     "removeComments": true,
     "resolveJsonModule": true,
+    "inlineSourceMap": true,
     "moduleResolution": "node",
     "module": "CommonJS",
     "target": "ES6",

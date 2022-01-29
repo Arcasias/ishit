@@ -1,8 +1,9 @@
-import { Component, tags, useState } from "@odoo/owl";
+import { Component, tags, hooks } from "@odoo/owl";
 import { ajax } from "../../common/utils";
 import { Environment } from "../classes/Environment";
 
 const { xml: html, css } = tags;
+const { onWillStart, onWillUpdateProps, useState } = hooks;
 
 interface ImageProps {
   src: string | null;
@@ -12,17 +13,15 @@ interface ImageProps {
 
 const SRC_FNAME_RE = /.*\/(.*)\.\w+$/;
 
-function getAltFromSrc(src: string): string {
-  return src.match(SRC_FNAME_RE)![1];
-}
+const getAltFromSrc = (src: string): string => src.match(SRC_FNAME_RE)![1];
 
-export default class ImageComponent extends Component<ImageProps, Environment> {
+export class ImageComponent extends Component<ImageProps, Environment> {
   //---------------------------------------------------------------------------
-  // PROPS
+  // PROPS / COMPONENTS
   //---------------------------------------------------------------------------
   static props = {
     src: String,
-    alt: String,
+    alt: { type: String, optional: true },
     preload: Boolean,
   };
   static defaultProps = {
@@ -78,8 +77,8 @@ export default class ImageComponent extends Component<ImageProps, Environment> {
   // PROPERTIES
   //---------------------------------------------------------------------------
 
-  private contentType: string | null = null;
-  private state = useState({
+  contentType: string | null = null;
+  state = useState({
     error: <boolean>false,
     src: <string | null>(this.props.preload ? null : this.props.src),
   });
@@ -96,13 +95,18 @@ export default class ImageComponent extends Component<ImageProps, Environment> {
   // LIFECYCLE
   //---------------------------------------------------------------------------
 
-  public async willStart() {
+  setup() {
+    onWillStart(() => this.onWillStart())
+    onWillUpdateProps((nextProps: ImageProps) => this.onWillUpdateProps(nextProps))
+  }
+
+  async onWillStart() {
     if (this.props.src) {
       await this.load(this.props.src);
     }
   }
 
-  public async willUpdateProps(nextProps: ImageProps) {
+  async onWillUpdateProps(nextProps: ImageProps) {
     if (nextProps.src !== this.props.src) {
       this.state.error = false;
       this.state.src = nextProps.preload ? null : nextProps.src;
@@ -116,7 +120,7 @@ export default class ImageComponent extends Component<ImageProps, Environment> {
   // PRIVATE
   //---------------------------------------------------------------------------
 
-  private async load(url: string) {
+  async load(url: string) {
     if (this.props.preload) {
       ajax(url, { type: "blob" })
         .then((request) => {
@@ -129,11 +133,11 @@ export default class ImageComponent extends Component<ImageProps, Environment> {
     }
   }
 
-  private onError(): void {
+  onError(): void {
     this.state.error = true;
   }
 
-  private onLoad(ev: Event): void {
+  onLoad(ev: Event): void {
     const img = ev.target as HTMLImageElement;
     this.state.error = false;
     this.trigger("ready", { img, contentType: this.contentType });

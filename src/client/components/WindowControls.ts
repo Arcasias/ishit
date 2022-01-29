@@ -3,14 +3,20 @@ import { name, version } from "../../package.min.json";
 import { Environment } from "../classes/Environment";
 
 const { xml: html, css } = tags;
+const DEV_STRING = "Development build";
 
-export default class WindowControls extends Component<any, Environment> {
+export class WindowControls extends Component<{}, Environment> {
+  //---------------------------------------------------------------------------
+  // PROPS / COMPONENTS
+  //---------------------------------------------------------------------------
+  static props = {};
+
   //---------------------------------------------------------------------------
   // TEMPLATE
   //---------------------------------------------------------------------------
   static template = html`
     <nav class="window-controls nav">
-      <div class="text-black-50 ms-2">${name} v${version}</div>
+      <div class="text-black-50 ms-2" t-esc="title"></div>
       <ul class="buttons">
         <li>
           <button
@@ -68,4 +74,8 @@ export default class WindowControls extends Component<any, Environment> {
       }
     }
   `;
+
+  private title = `${name}_${version}${
+    this.env.api.isDev ? ` | ${DEV_STRING}` : ""
+  }`;
 }
